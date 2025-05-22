@@ -14,13 +14,10 @@ import type { NavItem } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>(NavigationTab.DRUG_INFO);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // This state is still managed
   const [isApiKeyMissing, setIsApiKeyMissing] = useState<boolean>(false);
 
   useEffect(() => {
-    // In a real build process, process.env.API_KEY would be substituted.
-    // For local development, it needs to be set in the environment.
-    // This check simulates that. A placeholder like "YOUR_API_KEY" or undefined means it's not set.
     const apiKey = process.env.API_KEY;
     if (!apiKey || apiKey === "YOUR_API_KEY" || apiKey === "MISSING_API_KEY") {
       setIsApiKeyMissing(true);
@@ -33,7 +30,9 @@ const App: React.FC = () => {
   }, []);
 
   const renderActiveTab = () => {
-    if (isLoading && !isApiKeyMissing) return <div className="flex justify-center items-center h-64"><LoadingSpinner size="lg" /></div>;
+    // THE CRUCIAL CHANGE: We no longer unmount the active tab component based on App's isLoading state.
+    // The individual tab components will handle their own internal loading display (e.g., spinner on button).
+    // if (isLoading && !isApiKeyMissing) return <div className="flex justify-center items-center h-64"><LoadingSpinner size="lg" /></div>;
 
     switch (activeTab) {
       case NavigationTab.DRUG_INFO:
@@ -67,6 +66,8 @@ const App: React.FC = () => {
             className="mb-6"
           />
         )}
+        {/* Optional: A global, non-unmounting loading indicator could be placed here if desired, controlled by 'isLoading' */}
+        {/* For example: {isLoading && <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50"><LoadingSpinner size="lg" /></div>} */}
         {renderActiveTab()}
       </main>
       <Footer />

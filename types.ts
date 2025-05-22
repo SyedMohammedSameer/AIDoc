@@ -1,6 +1,3 @@
-
-
-
 export enum NavigationTab {
   DRUG_INFO = 'Drug Information & Q/A',
   IMAGE_ANALYSIS = 'Medical Image Analysis',

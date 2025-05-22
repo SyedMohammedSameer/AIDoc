@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { GEMINI_TEXT_MODEL, GEMINI_VISION_MODEL, DEFAULT_SYSTEM_INSTRUCTION } from '../constants';
-import type { HealthManagementInput, GroundingChunk, GeminiResponse } from '../types';
+import type { HealthManagementInput, GroundingChunk, GeminiResponse, GeminiCandidate } from '../types';
 
 const apiKey = process.env.API_KEY;
 let ai: GoogleGenAI | null = null;
@@ -40,7 +40,7 @@ async function generateContentWrapper(
 
   try {
     const config: any = { systemInstruction };
-    if (disableThinking && modelName === GEMINI_TEXT_MODEL) { // Assuming thinkingConfig is for specific models
+    if (disableThinking && modelName === GEMINI_TEXT_MODEL) {
       config.thinkingConfig = { thinkingBudget: 0 };
     }
     if (isJsonOutput) {
@@ -54,20 +54,46 @@ async function generateContentWrapper(
       config.tools = [{ googleSearch: {} }];
     }
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const genAiResponse: GenerateContentResponse = await ai.models.generateContent({
       model: modelName,
       contents: typeof prompt === 'string' ? [{ parts: [{ text: prompt }] }] : prompt,
       config: config,
     });
     
-    let responseText = response.text;
-    if (isJsonOutput && responseText && !useGoogleSearch) { // Don't try to parse JSON if googleSearch was used, as it overrides responseMimeType
+    let responseText = "";
+
+    // Try the official .text accessor first. Use it if it contains non-whitespace characters.
+    if (typeof genAiResponse.text === 'string' && genAiResponse.text.trim() !== "") {
+        responseText = genAiResponse.text;
+    } 
+    // If .text accessor didn't yield usable content, try manual extraction from candidates.
+    // This is a fallback if genAiResponse.text is empty, null, undefined, or only whitespace.
+    else if (genAiResponse.candidates && genAiResponse.candidates.length > 0) {
+      const firstCandidate = genAiResponse.candidates[0];
+      if (firstCandidate.content && firstCandidate.content.parts && firstCandidate.content.parts.length > 0) {
+        // Concatenate text from all parts that have a 'text' property.
+        responseText = firstCandidate.content.parts
+          .filter(part => typeof part.text === 'string')
+          .map(part => part.text)
+          .join('');
+      }
+    }
+    
+    // Trim the final result and ensure it's a string.
+    // If responseText was already populated from genAiResponse.text, it will be trimmed here.
+    // If it was populated from candidates, it will be trimmed here.
+    // If both failed, it remains an empty string from initialization.
+    responseText = (responseText || "").trim(); 
+
+    // The JSON extraction should happen on the potentially non-empty, trimmed string
+    if (isJsonOutput && responseText && !useGoogleSearch) {
+        // extractJsonString also trims its input and output, which is fine.
         responseText = extractJsonString(responseText);
     }
 
     return {
-      text: responseText || "", // Ensure text is always a string
-      candidates: response.candidates
+      text: responseText,
+      candidates: genAiResponse.candidates as GeminiCandidate[] // Cast to our defined type
     };
 
   } catch (error) {
@@ -79,11 +105,9 @@ async function generateContentWrapper(
         errorMessage = String(error.message);
     }
     
-    // Check for common API key related errors (example, actual error messages might vary)
     if (errorMessage.toLowerCase().includes("api key not valid") || errorMessage.toLowerCase().includes("invalid api key")) {
         errorMessage = "The configured API Key is invalid or has been rejected by the service. Please verify your API_KEY environment variable.";
     }
-
 
     return { text: `API Error: ${errorMessage}` };
   }
