@@ -1,0 +1,7 @@
+{
+  "name": "MediAI Assistant",
+  "description": "A multi-functional medical application leveraging AI for drug information, medical Q&A, image analysis, health management, and emergency first aid guidance. This tool provides information and suggestions, but is not a substitute for professional medical advice.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
