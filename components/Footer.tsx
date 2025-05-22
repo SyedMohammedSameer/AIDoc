@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GENERAL_DISCLAIMER, EMERGENCY_DISCLAIMER } from '../constants';
 
@@ -9,8 +8,8 @@ export const Footer: React.FC = () => {
         <p className="font-semibold mb-2 text-accent">{EMERGENCY_DISCLAIMER}</p>
         <p>{GENERAL_DISCLAIMER}</p>
         <p className="mt-4">&copy; {new Date().getFullYear()} MediAI Assistant. All rights reserved.</p>
+        <p className="mt-3 text-sm font-bold text-accent">Developed by Mohammed Sameer</p>
       </div>
     </footer>
   );
 };
-    
