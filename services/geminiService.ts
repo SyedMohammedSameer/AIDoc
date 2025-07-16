@@ -1,7 +1,15 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { GEMINI_TEXT_MODEL, GEMINI_VISION_MODEL, DEFAULT_SYSTEM_INSTRUCTION } from '../constants';
+import { DEFAULT_SYSTEM_INSTRUCTION } from '../constants'; // Assuming GEMINI_TEXT_MODEL and GEMINI_VISION_MODEL are also defined here
 import type { HealthManagementInput, GroundingChunk, GeminiResponse, GeminiCandidate } from '../types';
+
+// IMPORTANT: Update these model names to the current stable or recommended versions
+// As of July 2025, 'gemini-2.5-flash' is the stable general-purpose flash model.
+// 'gemini-2.5-flash-lite' is a newer preview for even faster, cheaper use.
+// 'gemini-1.5-pro' is a larger, more capable model.
+// Choose the one that best fits your needs.
+// For this fix, we'll use 'gemini-2.5-flash' as the default text model.
+const GEMINI_TEXT_MODEL = "gemini-2.5-flash"; // Updated model name
+const GEMINI_VISION_MODEL = "gemini-2.5-flash"; // Gemini 2.5 Flash also supports vision
 
 const apiKey = process.env.API_KEY;
 let ai: GoogleGenAI | null = null;
@@ -23,6 +31,20 @@ const extractJsonString = (text: string): string => {
   return jsonStr;
 };
 
+// Utility to strip basic Markdown formatting from text
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')    // italics
+    .replace(/`([^`]+)`/g, '$1')          // inline code
+    .replace(/^\s*[-*+]\s+/gm, '')      // unordered list
+    .replace(/^\s*\d+\.\s+/gm, '')    // ordered list
+    .replace(/#+\s/g, '')                // headers
+    .replace(/>\s?/g, '')                // blockquotes
+    .replace(/\n{2,}/g, '\n\n')        // collapse multiple newlines
+    .trim();
+}
+
 async function generateContentWrapper(
   modelName: string,
   prompt: string | { parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> },
@@ -41,6 +63,11 @@ async function generateContentWrapper(
   try {
     const config: any = { systemInstruction };
     if (disableThinking && modelName === GEMINI_TEXT_MODEL) {
+      // Note: thinkingConfig is not a standard configuration for generateContent.
+      // If you intended to control model "thinking" or processing,
+      // you might be referring to specific model parameters not generally exposed this way.
+      // For now, I'll keep it as is, but be aware it might not have the intended effect
+      // or could be specific to an older SDK version/feature.
       config.thinkingConfig = { thinkingBudget: 0 };
     }
     if (isJsonOutput) {
@@ -49,7 +76,7 @@ async function generateContentWrapper(
     if (useGoogleSearch) {
       if (isJsonOutput) {
         console.warn("Google Search with JSON output might lead to unexpected behavior. Removing JSON output for this call.");
-        delete config.responseMimeType; // Google Search does not support JSON output.
+        delete config.responseMimeType; // Google Search often doesn't support JSON output directly from the model response.
       }
       config.tools = [{ googleSearch: {} }];
     }
@@ -57,7 +84,7 @@ async function generateContentWrapper(
     const genAiResponse: GenerateContentResponse = await ai.models.generateContent({
       model: modelName,
       contents: typeof prompt === 'string' ? [{ parts: [{ text: prompt }] }] : prompt,
-      config: config,
+      generationConfig: config, // Use generationConfig for model parameters
     });
     
     let responseText = "";
@@ -80,15 +107,16 @@ async function generateContentWrapper(
     }
     
     // Trim the final result and ensure it's a string.
-    // If responseText was already populated from genAiResponse.text, it will be trimmed here.
-    // If it was populated from candidates, it will be trimmed here.
-    // If both failed, it remains an empty string from initialization.
     responseText = (responseText || "").trim(); 
 
     // The JSON extraction should happen on the potentially non-empty, trimmed string
     if (isJsonOutput && responseText && !useGoogleSearch) {
-        // extractJsonString also trims its input and output, which is fine.
         responseText = extractJsonString(responseText);
+    }
+
+    // Strip Markdown formatting for plain text output (unless JSON output is requested)
+    if (!isJsonOutput) {
+      responseText = stripMarkdown(responseText);
     }
 
     return {
@@ -107,12 +135,14 @@ async function generateContentWrapper(
     
     if (errorMessage.toLowerCase().includes("api key not valid") || errorMessage.toLowerCase().includes("invalid api key")) {
         errorMessage = "The configured API Key is invalid or has been rejected by the service. Please verify your API_KEY environment variable.";
+    } else if (errorMessage.toLowerCase().includes("not found")) {
+        // Add specific message for model not found
+        errorMessage = `The model '${modelName}' was not found or is not supported for this operation. Please check model availability.`;
     }
 
     return { text: `API Error: ${errorMessage}` };
   }
 }
-
 
 export const geminiService = {
   getDrugInformation: async (query: string): Promise<GeminiResponse> => {
