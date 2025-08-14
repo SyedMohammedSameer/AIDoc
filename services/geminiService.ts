@@ -23,78 +23,60 @@ function getAI(): GoogleGenAI {
   }
 }
 
-function formatMedicalResponse(rawText: string, type: string): FormattedResponse {
-  // Parse the response into sections for better formatting
-  const lines = rawText.split('\n').filter(line => line.trim());
-  
-  const title = lines[0]?.replace(/^#+\s*/, '') || `${type} Information`;
-  const summary = lines.slice(1, 3).join(' ').substring(0, 200) + '...';
-  
-  const sections: any[] = [];
-  let currentSection: any = null;
-  
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Detect headers (lines with # or ending with :)
-    if (line.startsWith('#') || (line.includes(':') && line.length < 80 && !line.includes('.'))) {
-      if (currentSection) sections.push(currentSection);
-      currentSection = {
-        heading: line.replace(/^#+\s*/, '').replace(':', ''),
-        content: '',
-        type: 'info',
-        items: []
-      };
-    } 
-    // Detect list items
-    else if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*') || /^\d+\./.test(line)) {
-      if (currentSection) {
-        currentSection.type = 'list';
-        currentSection.items.push(line.replace(/^[•\-*]\s*/, '').replace(/^\d+\.\s*/, ''));
-      }
-    } 
-    // Detect warnings
-    else if (line.toLowerCase().includes('warning') || line.toLowerCase().includes('caution') || line.toLowerCase().includes('important')) {
-      if (currentSection) currentSection.type = 'warning';
-      if (currentSection) currentSection.content += line + ' ';
-    } 
-    // Regular content
-    else {
-      if (currentSection) {
-        currentSection.content += line + ' ';
-      } else {
-        // Create a default section if none exists
-        currentSection = {
-          heading: 'Information',
-          content: line + ' ',
-          type: 'info',
-          items: []
-        };
-      }
+// Standard JSON structure for all responses
+const JSON_RESPONSE_SCHEMA = `
+{
+  "title": "Brief, clear title for the response",
+  "summary": "2-3 sentence overview of the key points",
+  "sections": [
+    {
+      "heading": "Section Title",
+      "content": "Main paragraph content for this section",
+      "type": "info|warning|success",
+      "items": ["Optional bullet point 1", "Optional bullet point 2"]
     }
+  ]
+}`;
+
+function parseStructuredResponse(rawText: string, fallbackTitle: string): FormattedResponse {
+  try {
+    // Try to extract JSON from the response
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      return {
+        title: parsed.title || fallbackTitle,
+        summary: parsed.summary || "AI-generated medical information",
+        sections: parsed.sections || [],
+        disclaimer: "This information is AI-generated and should not replace professional medical consultation."
+      };
+    }
+  } catch (error) {
+    console.warn("Failed to parse JSON response, using fallback formatting");
   }
   
-  if (currentSection) sections.push(currentSection);
-  
-  // If no sections were created, create a single section with all content
-  if (sections.length === 0) {
-    sections.push({
-      heading: 'AI Response',
-      content: rawText,
-      type: 'info',
-      items: []
-    });
-  }
-  
+  // Fallback: create a single section with cleaned content
+  const cleanText = rawText
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/#{1,6}\s*/g, '')
+    .trim();
+    
   return {
-    title,
-    summary,
-    sections,
+    title: fallbackTitle,
+    summary: cleanText.substring(0, 150) + "...",
+    sections: [{
+      heading: "Information",
+      content: cleanText,
+      type: "info" as const,
+      items: []
+    }],
     disclaimer: "This information is AI-generated and should not replace professional medical consultation."
   };
 }
 
-async function generateContent(prompt: string, systemInstruction: string): Promise<GeminiResponse> {
+async function generateStructuredContent(prompt: string, systemInstruction: string): Promise<GeminiResponse> {
   try {
     const ai = getAI();
     
@@ -119,29 +101,64 @@ async function generateContent(prompt: string, systemInstruction: string): Promi
 
 export const geminiService = {
   async getMedicalConsultation(query: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa, an expert AI medical consultant. 
+    const systemInstruction = `You are Dr. VitaShifa, an expert AI medical consultant.
 
-Provide comprehensive, accurate medical information with clear structure:
+CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
-1. Start with a brief summary of the condition/topic
-2. Organize information into clear sections with headers like:
-   - Key Information
-   - Symptoms & Signs  
-   - Treatment Options
-   - Important Considerations
-   - When to Seek Help
+${JSON_RESPONSE_SCHEMA}
 
-Use bullet points for lists and emphasize important warnings.
-Always remind patients to consult healthcare professionals for medical decisions.
-Be clear, accurate, and patient-friendly.`;
+Rules for Medical Consultation responses:
+1. Create EXACTLY 4 sections with these headings:
+   - "Overview" (brief explanation of condition/topic)
+   - "Key Symptoms" (main signs to look for)  
+   - "Treatment Options" (what can be done)
+   - "When to Seek Help" (warning signs/next steps)
 
-    const response = await generateContent(query, systemInstruction);
-    const formatted = formatMedicalResponse(response.text, 'Medical Consultation');
+2. Each section should have:
+   - Clear heading
+   - 1-2 sentences of content
+   - 2-4 bullet points with specific details
+   - Appropriate type: "info", "warning", or "success"
+
+3. Keep content concise but medically accurate
+4. Always include safety guidance
+5. Use "warning" type for urgent/safety information
+
+Example query: "I have a headache and fever"
+Your response should be the JSON structure with relevant medical information.`;
+
+    const response = await generateStructuredContent(query, systemInstruction);
+    const formatted = parseStructuredResponse(response.text, 'Medical Consultation');
     
     return { response, formatted };
   },
 
   async analyzeImage(base64Image: string, mimeType: string, prompt: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
+    const systemInstruction = `You are Dr. VitaShifa's medical imaging AI specialist.
+
+CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
+
+${JSON_RESPONSE_SCHEMA}
+
+Rules for Image Analysis responses:
+1. Create EXACTLY 4 sections with these headings:
+   - "Image Overview" (what type of image and general quality)
+   - "Key Observations" (main findings visible)
+   - "Potential Findings" (what these observations might indicate)
+   - "Recommendations" (next steps and professional consultation)
+
+2. Each section should have:
+   - Clear heading
+   - 1-2 sentences of content explaining the observation
+   - 2-4 bullet points with specific details
+   - Use "warning" type for concerning findings
+
+3. Always emphasize this is not diagnostic
+4. Be thorough but avoid over-interpretation
+5. Include disclaimer about professional interpretation
+
+Analyze the medical image and provide structured observations.`;
+
     try {
       const ai = getAI();
       
@@ -151,21 +168,24 @@ Be clear, accurate, and patient-friendly.`;
           {
             role: "user",
             parts: [
-              { text: `${prompt}\n\nPlease provide a structured analysis with clear sections and observations.` },
+              { text: `${prompt}\n\nAnalyze this medical image following the JSON structure requirements.` },
               { inlineData: { mimeType, data: base64Image.split(',')[1] } }
             ]
           }
-        ]
+        ],
+        config: {
+          systemInstruction: systemInstruction
+        }
       });
       
       const responseText = result.text || "No analysis generated";
       const geminiResponse = { text: responseText, candidates: result.candidates || [] };
-      const formatted = formatMedicalResponse(responseText, 'Image Analysis');
+      const formatted = parseStructuredResponse(responseText, 'Medical Image Analysis');
       
       return { response: geminiResponse, formatted };
     } catch (error) {
       const errorResponse = { text: `Analysis Error: ${error instanceof Error ? error.message : 'Unknown error'}` };
-      return { response: errorResponse, formatted: formatMedicalResponse(errorResponse.text, 'Image Analysis') };
+      return { response: errorResponse, formatted: parseStructuredResponse(errorResponse.text, 'Image Analysis Error') };
     }
   },
 
@@ -175,44 +195,72 @@ Be clear, accurate, and patient-friendly.`;
 Chronic Conditions: ${input.chronicConditions.join(', ') || 'None specified'}
 Current Symptoms: ${input.currentSymptoms || 'None specified'}
 Lifestyle: ${input.lifestyleFactors || 'Not specified'}
-Goals: ${input.healthGoals || 'General wellness'}
+Goals: ${input.healthGoals || 'General wellness'}`;
 
-Please provide specific, actionable recommendations organized into clear sections.`;
+    const systemInstruction = `You are Dr. VitaShifa's wellness coach creating personalized health plans.
 
-    const systemInstruction = `You are Dr. VitaShifa's wellness coach. Create personalized health plans with this structure:
+CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
-1. Current Health Assessment
-2. Wellness Goals & Timeline  
-3. Nutrition Recommendations
-4. Exercise & Activity Plan
-5. Lifestyle Modifications
-6. Monitoring & Tracking
-7. Medical Follow-up
+${JSON_RESPONSE_SCHEMA}
 
-Make recommendations specific, actionable, and encouraging. Use clear headers and bullet points.`;
+Rules for Wellness Plan responses:
+1. Create EXACTLY 4 sections with these headings:
+   - "Health Assessment" (current status analysis)
+   - "Nutrition Plan" (dietary recommendations)
+   - "Activity & Exercise" (physical activity guidance)
+   - "Lifestyle Changes" (habits and monitoring)
 
-    const response = await generateContent(prompt, systemInstruction);
-    const formatted = formatMedicalResponse(response.text, 'Wellness Plan');
+2. Each section should have:
+   - Clear heading
+   - 1-2 sentences explaining the approach
+   - 3-5 specific, actionable bullet points
+   - Use "success" type for positive recommendations
+
+3. Make recommendations:
+   - Specific and actionable
+   - Appropriate for the person's conditions
+   - Encouraging and realistic
+   - Include monitoring suggestions
+
+4. Always emphasize professional medical consultation for chronic conditions`;
+
+    const response = await generateStructuredContent(prompt, systemInstruction);
+    const formatted = parseStructuredResponse(response.text, 'Personalized Wellness Plan');
     
     return { response, formatted };
   },
 
   async getEmergencyGuidance(situation: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa's emergency response AI. Provide immediate, life-saving guidance with this structure:
+    const systemInstruction = `You are Dr. VitaShifa's emergency response AI providing life-saving guidance.
 
-🚨 EMERGENCY RESPONSE PROTOCOL
+CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
-1. IMMEDIATE ACTIONS (First 60 seconds)
-2. Safety Considerations  
-3. Step-by-Step Procedure
-4. Warning Signs to Watch For
-5. When to Call Emergency Services
-6. Continue Until Help Arrives
+${JSON_RESPONSE_SCHEMA}
 
-ALWAYS emphasize calling emergency services for serious situations. Keep instructions clear, calm, and numbered.`;
+Rules for Emergency Guidance responses:
+1. Create EXACTLY 4 sections with these headings:
+   - "Immediate Actions" (first 60 seconds)
+   - "Safety Steps" (securing the situation)
+   - "Ongoing Care" (until help arrives)
+   - "When to Call 911" (escalation criteria)
 
-    const response = await generateContent(situation, systemInstruction);
-    const formatted = formatMedicalResponse(response.text, 'Emergency Guidance');
+2. Each section should have:
+   - Clear heading
+   - 1-2 sentences with urgency context
+   - 3-5 numbered/specific action steps
+   - Use "warning" type for critical safety information
+
+3. Content must be:
+   - Clear and actionable
+   - Appropriate for non-medical persons
+   - Emphasize professional emergency services
+   - Include specific warning signs
+
+4. ALWAYS prioritize calling emergency services for serious situations
+5. Keep instructions calm, clear, and numbered`;
+
+    const response = await generateStructuredContent(situation, systemInstruction);
+    const formatted = parseStructuredResponse(response.text, 'Emergency Guidance');
     
     return { response, formatted };
   }
