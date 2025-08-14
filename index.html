@@ -1,25 +1,53 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VitaShifa - AI Health Assistant</title>
+    <meta name="description" content="Your AI-powered health companion providing medical consultations, image analysis, and wellness planning." />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
-              primary: '#007A7A', // Teal
-              secondary: '#004D4D', // Darker Teal
-              accent: '#FFB300', // Amber for accents/warnings
-              lightbg: '#F0F7F7', // Light teal background
-              darktext: '#1A202C', // Dark gray for text
-              lighttext: '#F7FAFC', // Light gray for text on dark backgrounds
+              primary: '#007A7A',
+              secondary: '#004D4D',
+              accent: '#FFB300',
+              lightbg: '#F0F7F7',
+              darktext: '#1A202C',
+              lighttext: '#F7FAFC',
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+              'slide-up': 'slideUp 0.3s ease-out',
+              'scale-in': 'scaleIn 0.2s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              scaleIn: {
+                '0%': { opacity: '0', transform: 'scale(0.95)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
             },
           }
         }
@@ -30,25 +58,143 @@
       body {
         font-family: 'Inter', sans-serif;
       }
-      /* Custom scrollbar for better aesthetics */
+      
+      /* Smooth transitions for theme switching */
+      * {
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+      }
+      
+      /* Glass effect */
+      .glass-effect {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      
+      .dark .glass-effect {
+        background: rgba(31, 41, 55, 0.85);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+      }
+      
+      /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
+      
       ::-webkit-scrollbar-track {
-        background: #f0f7f7; /* lightbg */
+        background: #f0f7f7;
       }
+      
+      .dark ::-webkit-scrollbar-track {
+        background: #374151;
+      }
+      
       ::-webkit-scrollbar-thumb {
-        background: #007A7A; /* primary */
+        background: #007A7A;
         border-radius: 4px;
       }
+      
       ::-webkit-scrollbar-thumb:hover {
-        background: #004D4D; /* secondary */
+        background: #004D4D;
+      }
+      
+      /* Focus styles for accessibility */
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible,
+      select:focus-visible {
+        outline: 2px solid #007A7A;
+        outline-offset: 2px;
+      }
+      
+      /* Improve contrast for dark mode */
+      .dark {
+        color-scheme: dark;
+      }
+      
+      /* Prevent flash of unstyled content */
+      .no-flash {
+        visibility: hidden;
+      }
+      
+      /* Show content after theme is loaded */
+      .theme-loaded .no-flash {
+        visibility: visible;
+      }
+      
+      /* Loading spinner */
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+      
+      /* RTL support for Arabic and other RTL languages */
+      [dir="rtl"] {
+        text-align: right;
+      }
+      
+      [dir="rtl"] .flex {
+        flex-direction: row-reverse;
+      }
+      
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        .glass-effect {
+          background: rgba(255, 255, 255, 0.95);
+          border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+        
+        .dark .glass-effect {
+          background: rgba(31, 41, 55, 0.95);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+      }
+      
+      /* Reduced motion support */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
     </style>
   </head>
-  <body class="bg-lightbg text-darktext">
+  <body class="bg-lightbg text-darktext no-flash">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    
+    <!-- Initialize theme as early as possible to prevent flash -->
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('vitashifa-theme') || 'system';
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = savedTheme === 'system' ? systemTheme : savedTheme;
+        
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1f2937');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff');
+        }
+        
+        // Set language direction
+        const savedLang = localStorage.getItem('vitashifa-language');
+        if (savedLang && ['ar', 'he', 'fa'].includes(savedLang)) {
+          document.documentElement.dir = 'rtl';
+        }
+        
+        document.documentElement.classList.add('theme-loaded');
+      })();
+    </script>
   </body>
 </html>

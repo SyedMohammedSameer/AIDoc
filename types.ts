@@ -8,8 +8,10 @@ export enum NavigationTab {
 export interface NavItem {
   id: NavigationTab;
   label: string;
+  labelKey: string;
   icon: string;
   description: string;
+  descriptionKey: string;
 }
 
 export interface HealthManagementInput {

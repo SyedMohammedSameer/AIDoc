@@ -8,26 +8,34 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { 
     id: NavigationTab.DRUG_INFO, 
     label: 'Medical Consultation', 
+    labelKey: 'medicalConsultation',
     icon: 'MessageCircle',
-    description: 'Get expert medical guidance and drug information'
+    description: 'Get expert medical guidance and drug information',
+    descriptionKey: 'medicalConsultationDesc'
   },
   { 
     id: NavigationTab.IMAGE_ANALYSIS, 
     label: 'AI Diagnosis', 
+    labelKey: 'aiDiagnosis',
     icon: 'Scan',
-    description: 'Analyze medical images with AI precision'
+    description: 'Analyze medical images with AI precision',
+    descriptionKey: 'aiDiagnosisDesc'
   },
   { 
     id: NavigationTab.HEALTH_MANAGEMENT, 
     label: 'Wellness Planning', 
+    labelKey: 'wellnessPlanning',
     icon: 'Heart',
-    description: 'Personalized health and wellness strategies'
+    description: 'Personalized health and wellness strategies',
+    descriptionKey: 'wellnessPlanningDesc'
   },
   { 
     id: NavigationTab.EMERGENCY_AID, 
     label: 'Emergency Care', 
+    labelKey: 'emergencyCare',
     icon: 'AlertTriangle',
-    description: 'Immediate first aid and emergency guidance'
+    description: 'Immediate first aid and emergency guidance',
+    descriptionKey: 'emergencyCareDesc'
   },
 ];
 

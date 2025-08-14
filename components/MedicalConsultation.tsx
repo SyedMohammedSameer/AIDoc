@@ -4,6 +4,7 @@ import { geminiService } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
+import { useLanguage } from '../contexts/LanguageContext';
 import type { FormattedResponse } from '../types';
 
 export const MedicalConsultation: React.FC = () => {
@@ -11,6 +12,7 @@ export const MedicalConsultation: React.FC = () => {
   const [response, setResponse] = useState<FormattedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,32 +42,32 @@ export const MedicalConsultation: React.FC = () => {
       <div className="text-center space-y-2">
         <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-teal-500 to-blue-600 text-white px-4 py-2 rounded-full">
           <Bot className="w-5 h-5" />
-          <span className="font-medium">AI Medical Consultation</span>
+          <span className="font-medium">{t('medicalConsultation')}</span>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">Ask about symptoms, medications, or health concerns</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('medicalConsultationDesc')}</p>
       </div>
 
       {/* Disclaimer */}
       <Alert 
         type="info" 
         title="Medical Disclaimer"
-        message="This AI consultation is for informational purposes only and does not replace professional medical advice. Always consult with healthcare providers for medical concerns."
+        message={t('medicalDisclaimer')}
       />
 
       {/* Input Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 transition-colors duration-300">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="consultation-query" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              What would you like to consult about?
+              {t('askAbout')}
             </label>
             <textarea
               id="consultation-query"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g., 'I have a headache and feel nauseous. What could this be?' or 'Tell me about the side effects of aspirin'"
+              placeholder={t('consultationPlaceholder')}
               rows={4}
-              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white resize-none transition-all"
+              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white resize-none transition-all bg-white"
               disabled={isLoading}
             />
           </div>
@@ -80,7 +82,7 @@ export const MedicalConsultation: React.FC = () => {
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                <span>Get Consultation</span>
+                <span>{t('getConsultation')}</span>
               </>
             )}
           </button>

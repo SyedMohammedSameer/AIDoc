@@ -1,0 +1,9 @@
+{
+    "name": "VitaShifa - AI Health Assistant",
+    "short_name": "VitaShifa",
+    "description": "Your AI-powered health companion",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F0F7F7",
+    "theme_color": "#007A7A"
+  }

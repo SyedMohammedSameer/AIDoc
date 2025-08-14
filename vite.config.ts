@@ -1,27 +1,56 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      plugins: [react()],
-      define: {
-        'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
-        'import.meta.env.VITE_FIREBASE_API_KEY': JSON.stringify(env.VITE_FIREBASE_API_KEY),
-        'import.meta.env.VITE_FIREBASE_AUTH_DOMAIN': JSON.stringify(env.VITE_FIREBASE_AUTH_DOMAIN),
-        'import.meta.env.VITE_FIREBASE_PROJECT_ID': JSON.stringify(env.VITE_FIREBASE_PROJECT_ID),
-        'import.meta.env.VITE_FIREBASE_STORAGE_BUCKET': JSON.stringify(env.VITE_FIREBASE_STORAGE_BUCKET),
-        'import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(env.VITE_FIREBASE_MESSAGING_SENDER_ID),
-        'import.meta.env.VITE_FIREBASE_APP_ID': JSON.stringify(env.VITE_FIREBASE_APP_ID)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      },
-      optimizeDeps: {
-        include: ['react', 'react-dom']
+export default defineConfig({
+  plugins: [react()],
+  
+  // Environment configuration
+  envPrefix: 'VITE_',
+  
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+    }
+  },
+  
+  // Fix Firebase dependency issues
+  optimizeDeps: {
+    include: [
+      'react', 
+      'react-dom', 
+      '@google/genai',
+      'firebase/app',
+      'firebase/firestore',
+      'firebase/analytics'
+    ],
+    exclude: ['firebase']
+  },
+  
+  // Server configuration for development
+  server: {
+    port: 5173,
+    host: true,
+    open: false,
+    cors: true
+  },
+  
+  // Build configuration
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    minify: false,
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+    rollupOptions: {
+      external: (id) => {
+        // Don't bundle firebase - let it be handled by CDN or individual imports
+        return id === 'firebase' || id.startsWith('firebase/');
       }
-    };
+    }
+  },
+  
+  // Additional Vite configuration to handle Firebase
+  ssr: {
+    noExternal: ['@google/genai']
+  }
 });

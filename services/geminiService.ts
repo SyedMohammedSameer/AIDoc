@@ -1,34 +1,45 @@
 import { GoogleGenAI } from "@google/genai";
 import type { HealthManagementInput, GeminiResponse, FormattedResponse } from '../types';
-import { firebaseService } from './firebase';
 
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_MODEL = "gemini-2.0-flash-001";
 
-// Initialize AI client lazily
-function getAI(): GoogleGenAI | null {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+function getApiKey(): string {
+  // Try environment variable first
+  let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   
-  if (!apiKey) {
-    console.error("VITE_GEMINI_API_KEY not configured");
-    return null;
+  // Check if the API key is valid
+  if (!apiKey || apiKey === 'undefined' || apiKey === '' || apiKey === 'null') {
+    console.error("❌ No valid API key found in environment variables");
+    throw new Error("VITE_GEMINI_API_KEY environment variable is not set. Please check your .env file and restart the development server.");
   }
   
+  console.log("✅ API key loaded successfully:", apiKey.substring(0, 10) + "...");
+  return apiKey;
+}
+
+function getAI(): GoogleGenAI {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error("No API key available");
+  }
+  
+  console.log("✅ Creating GoogleGenAI instance with key:", apiKey.substring(0, 10) + "...");
+  
   try {
-    return new GoogleGenAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey });
+    console.log("✅ GoogleGenAI instance created successfully");
+    return ai;
   } catch (error) {
-    console.error("Failed to initialize GoogleGenAI:", error);
-    return null;
+    console.error("❌ Error creating GoogleGenAI instance:", error);
+    throw error;
   }
 }
 
-// Enhanced response formatter
 function formatMedicalResponse(rawText: string, type: string): FormattedResponse {
   const lines = rawText.split('\n').filter(line => line.trim());
   
-  // Extract title from first line or create one
   const title = lines[0]?.replace(/^#+\s*/, '') || `${type} Information`;
-  
-  // Create summary from first paragraph
   const summary = lines.slice(1, 3).join(' ').substring(0, 200) + '...';
   
   const sections: any[] = [];
@@ -38,7 +49,6 @@ function formatMedicalResponse(rawText: string, type: string): FormattedResponse
     const line = lines[i].trim();
     
     if (line.startsWith('#') || line.includes(':') && line.length < 50) {
-      // New section
       if (currentSection) sections.push(currentSection);
       currentSection = {
         heading: line.replace(/^#+\s*/, '').replace(':', ''),
@@ -47,7 +57,6 @@ function formatMedicalResponse(rawText: string, type: string): FormattedResponse
         items: []
       };
     } else if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-      // List item
       if (currentSection) {
         currentSection.type = 'list';
         currentSection.items.push(line.replace(/^[•\-*]\s*/, ''));
@@ -56,7 +65,6 @@ function formatMedicalResponse(rawText: string, type: string): FormattedResponse
       if (currentSection) currentSection.type = 'warning';
       if (currentSection) currentSection.content += line + ' ';
     } else {
-      // Regular content
       if (currentSection) currentSection.content += line + ' ';
     }
   }
@@ -71,216 +79,104 @@ function formatMedicalResponse(rawText: string, type: string): FormattedResponse
   };
 }
 
-async function generateContent(prompt: string, systemInstruction: string, useSearch = true): Promise<GeminiResponse> {
-  const ai = getAI();
-  if (!ai) {
-    return { text: "API Error: Gemini API not configured" };
-  }
-
+async function generateContent(prompt: string, systemInstruction: string): Promise<GeminiResponse> {
   try {
-    const model = ai.getGenerativeModel({ 
+    console.log("🔄 Starting content generation...");
+    
+    const ai = getAI();
+    console.log("✅ GoogleGenAI instance created");
+    
+    // Use the correct API structure for version 1.14.0
+    console.log("🔍 Using ai.models.generateContent method");
+    const result = await ai.models.generateContent({
       model: GEMINI_MODEL,
-      systemInstruction,
-      tools: useSearch ? [{ googleSearch: {} }] : undefined
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction
+      }
     });
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    
+    console.log("✅ Content generated");
+    
+    // Extract the text from the response
+    const text = result.text || "No response generated";
+    console.log("✅ Response extracted:", text ? 'Success' : 'Empty');
     
     return {
-      text: response.text() || "No response generated",
-      candidates: response.candidates
+      text: text,
+      candidates: result.candidates || []
     };
   } catch (error) {
-    console.error('Gemini API Error:', error);
-    return { text: `API Error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    console.error('❌ Generation error:', error);
+    return { text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
 
 export const geminiService = {
   async getMedicalConsultation(query: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa, an expert AI medical consultant. Provide comprehensive, accurate medical information with the following structure:
-
-# Medical Analysis
-[Clear heading for the condition/query]
-
-## Key Information
-[Essential facts about the condition/medication]
-
-## Symptoms & Signs
-[If applicable, list symptoms to watch for]
-
-## Treatment Options
-[Available treatments, both medical and lifestyle]
-
-## Important Considerations
-[Warnings, contraindications, when to seek immediate help]
-
-## Next Steps
-[Recommended actions for the patient]
-
-Always emphasize the importance of professional medical consultation. Use clear, patient-friendly language while maintaining medical accuracy.`;
+    console.log("🩺 Starting medical consultation for:", query.substring(0, 50) + "...");
+    
+    const systemInstruction = `You are Dr. VitaShifa, an expert AI medical consultant. Provide helpful medical information about: ${query}`;
 
     const response = await generateContent(query, systemInstruction);
     const formatted = formatMedicalResponse(response.text, 'Medical Consultation');
-    
-    // Log to Firebase
-    await firebaseService.logConsultation({
-      timestamp: new Date(),
-      type: 'consultation' as any,
-      query,
-      response: response.text
-    });
     
     return { response, formatted };
   },
 
   async analyzeImage(base64Image: string, mimeType: string, prompt: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa's AI imaging specialist. Analyze medical images with this structure:
-
-# Image Analysis Report
-[Type of image and general assessment]
-
-## Visual Observations
-[Detailed description of what you observe]
-
-## Potential Findings
-[Possible conditions or abnormalities, if any]
-
-## Recommendations
-[Suggested follow-up actions]
-
-## Limitations
-[Acknowledge limitations of AI analysis]
-
-Maintain professional medical terminology while being accessible to patients.`;
-
-    const ai = getAI();
-    if (!ai) {
-      const errorResponse = { text: "API Error: Gemini API not configured" };
-      return { response: errorResponse, formatted: formatMedicalResponse(errorResponse.text, 'Image Analysis') };
-    }
-
+    console.log("🔍 Starting image analysis...");
+    
     try {
-      const model = ai.getGenerativeModel({ 
+      const ai = getAI();
+      
+      // Use the correct API structure for version 1.14.0
+      console.log("🔍 Using ai.models.generateContent method with image");
+      const result = await ai.models.generateContent({
         model: GEMINI_MODEL,
-        systemInstruction 
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType, data: base64Image.split(',')[1] } }
+            ]
+          }
+        ]
       });
-
-      const result = await model.generateContent([
-        prompt,
-        { inlineData: { mimeType, data: base64Image.split(',')[1] } }
-      ]);
       
-      const response = await result.response;
-      const responseText = response.text() || "No analysis generated";
-      
-      const geminiResponse = { text: responseText, candidates: response.candidates };
+      // Extract the text from the response
+      const responseText = result.text || "No analysis generated";
+      const geminiResponse = { text: responseText, candidates: result.candidates || [] };
       const formatted = formatMedicalResponse(responseText, 'Image Analysis');
-      
-      // Log to Firebase
-      await firebaseService.logConsultation({
-        timestamp: new Date(),
-        type: 'diagnosis' as any,
-        query: `Image analysis: ${prompt}`,
-        response: responseText
-      });
       
       return { response: geminiResponse, formatted };
     } catch (error) {
-      console.error('Image analysis error:', error);
+      console.error('❌ Image analysis error:', error);
       const errorResponse = { text: `Analysis Error: ${error instanceof Error ? error.message : 'Unknown error'}` };
       return { response: errorResponse, formatted: formatMedicalResponse(errorResponse.text, 'Image Analysis') };
     }
   },
 
   async getWellnessPlan(input: HealthManagementInput): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa's wellness coach. Create personalized health plans with this structure:
-
-# Your Personalized Wellness Plan
-[Motivational opening based on their goals]
-
-## Current Health Profile
-[Summary of their conditions and lifestyle]
-
-## Wellness Goals
-[Their stated goals with realistic timelines]
-
-## Nutrition Recommendations
-[Specific dietary advice]
-
-## Exercise & Activity Plan
-[Tailored physical activity suggestions]
-
-## Lifestyle Modifications
-[Sleep, stress management, habits]
-
-## Monitoring & Tracking
-[What to track and how often]
-
-## Medical Follow-up
-[When to see healthcare providers]
-
-Make recommendations specific, actionable, and encouraging.`;
-
-    const prompt = `Create a comprehensive wellness plan for someone with:
+    console.log("💪 Starting wellness plan generation...");
     
-Chronic Conditions: ${input.chronicConditions.join(', ') || 'None specified'}
-Current Symptoms: ${input.currentSymptoms || 'None specified'}
-Lifestyle: ${input.lifestyleFactors || 'Not specified'}
-Goals: ${input.healthGoals || 'General wellness'}
+    const prompt = `Create a wellness plan for: ${JSON.stringify(input)}`;
+    const systemInstruction = "You are a wellness coach. Create a helpful wellness plan.";
 
-Please provide specific, actionable recommendations.`;
-
-    const response = await generateContent(prompt, systemInstruction, false);
+    const response = await generateContent(prompt, systemInstruction);
     const formatted = formatMedicalResponse(response.text, 'Wellness Plan');
-    
-    // Log to Firebase
-    await firebaseService.logConsultation({
-      timestamp: new Date(),
-      type: 'wellness' as any,
-      query: prompt,
-      response: response.text
-    });
     
     return { response, formatted };
   },
 
   async getEmergencyGuidance(situation: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
-    const systemInstruction = `You are Dr. VitaShifa's emergency response AI. Provide immediate, life-saving guidance with this structure:
-
-# 🚨 EMERGENCY RESPONSE PROTOCOL
-
-## IMMEDIATE ACTIONS (First 60 seconds)
-[Critical first steps - numbered list]
-
-## SAFETY FIRST
-[Safety considerations for responder and patient]
-
-## STEP-BY-STEP PROCEDURE
-[Detailed instructions in order]
-
-## SIGNS TO WATCH FOR
-[Warning signs that indicate worsening]
-
-## WHEN TO CALL FOR HELP
-[Clear criteria for emergency services]
-
-## CONTINUE UNTIL HELP ARRIVES
-[What to do while waiting]
-
-ALWAYS start by emphasizing to call emergency services for serious situations. Keep instructions clear and calm.`;
-
-    const response = await generateContent(situation, systemInstruction, false);
-    const formatted = formatMedicalResponse(response.text, 'Emergency Guidance');
+    console.log("🚨 Starting emergency guidance...");
     
-    // Log to Firebase
-    await firebaseService.logConsultation({
-      timestamp: new Date(),
-      type: 'emergency' as any,
-      query: situation,
-      response: response.text
-    });
+    const systemInstruction = "You are an emergency response guide. Provide helpful emergency guidance.";
+
+    const response = await generateContent(situation, systemInstruction);
+    const formatted = formatMedicalResponse(response.text, 'Emergency Guidance');
     
     return { response, formatted };
   }
