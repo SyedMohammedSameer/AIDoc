@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, Target } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { firebaseService } from '../services/firebase';
+import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -59,7 +59,7 @@ export const WellnessPlanning: React.FC<WellnessPlanningProps> = ({ user, onChat
       } else {
         setResponse(result.formatted);
         
-        // Save to Firebase/localStorage
+        // Save to Supabase/localStorage
         setSaveStatus('saving');
         try {
           const queryText = `Wellness Plan Request:
@@ -68,7 +68,7 @@ Symptoms: ${payload.currentSymptoms || 'None'}
 Lifestyle: ${payload.lifestyleFactors || 'Not specified'}
 Goals: ${payload.healthGoals || 'General wellness'}`;
 
-          await firebaseService.saveChat(
+          await supabaseService.saveChat(
             NavigationTab.HEALTH_MANAGEMENT,
             queryText,
             result.formatted
@@ -97,7 +97,7 @@ Goals: ${payload.healthGoals || 'General wellness'}`;
       case 'saved':
         return { 
           type: 'success' as const, 
-          message: firebaseService.isEnabled() ? 'Wellness plan saved to your history' : 'Wellness plan saved locally'
+          message: supabaseService.isEnabled() ? 'Wellness plan saved to your history' : 'Wellness plan saved locally'
         };
       case 'error':
         return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
@@ -235,7 +235,7 @@ Goals: ${payload.healthGoals || 'General wellness'}`;
             <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
               <p className="text-sm text-pink-700 dark:text-pink-300">
                 💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
-                Your wellness plan will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+                Your wellness plan will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
               </p>
             </div>
           )}

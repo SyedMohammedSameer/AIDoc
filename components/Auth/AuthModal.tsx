@@ -1,10 +1,10 @@
 // components/Auth/AuthModal.tsx
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, LogIn, UserPlus, Bug } from 'lucide-react';
-import { firebaseService } from '../../services/firebase';
+import { supabaseService } from '../../services/supabase';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { Alert } from '../Alert';
-import { FirebaseDebug } from '../FirebaseDebug';
+
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,7 +21,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
 
   const resetForm = () => {
     setEmail('');
@@ -40,8 +39,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
     setError(null);
 
     try {
-      const user = await firebaseService.signInAnonymously();
-      await firebaseService.createUserProfile(user);
+      const user = await supabaseService.signInAnonymously();
+      await supabaseService.createUserProfile(user);
       onAuthSuccess(user);
       handleClose();
     } catch (err) {
@@ -59,13 +58,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
     try {
       let user;
       if (mode === 'signup') {
-        user = await firebaseService.signUpWithEmail(email, password, displayName);
+        user = await supabaseService.signUpWithEmail(email, password, displayName);
       } else {
-        user = await firebaseService.signInWithEmail(email, password);
+        user = await supabaseService.signInWithEmail(email, password);
       }
       
-      await firebaseService.createUserProfile(user);
-      await firebaseService.syncLocalDataToFirebase();
+      await supabaseService.createUserProfile(user);
+      await supabaseService.syncLocalDataToSupabase();
       onAuthSuccess(user);
       handleClose();
     } catch (err: any) {
@@ -78,35 +77,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         customData: err.customData
       });
       
-      const errorMessage = err.code ? getFirebaseErrorMessage(err.code) : `Authentication failed: ${err.message || 'Unknown error'}`;
+      const errorMessage = err.code ? getSupabaseErrorMessage(err.code) : `Authentication failed: ${err.message || 'Unknown error'}`;
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getFirebaseErrorMessage = (errorCode: string): string => {
-    console.log('Firebase error code:', errorCode);
+  const getSupabaseErrorMessage = (errorCode: string): string => {
+    console.log('Supabase error code:', errorCode);
     switch (errorCode) {
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
+      case 'invalid_credentials':
         return 'Invalid email or password.';
-      case 'auth/email-already-in-use':
+      case 'email_already_in_use':
+      case 'user_already_exists':
         return 'An account with this email already exists.';
-      case 'auth/weak-password':
+      case 'weak_password':
         return 'Password should be at least 6 characters.';
-      case 'auth/invalid-email':
+      case 'invalid_email':
         return 'Please enter a valid email address.';
-      case 'auth/operation-not-allowed':
-        return 'Email/password authentication is not enabled. Please contact support.';
-      case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
-      case 'auth/network-request-failed':
+      case 'signup_disabled':
+        return 'New user signups are currently disabled.';
+      case 'too_many_requests':
+        return 'Too many requests. Please try again later.';
+      case 'network_request_failed':
         return 'Network error. Please check your connection and try again.';
-      case 'auth/invalid-api-key':
+      case 'invalid_api_key':
         return 'Invalid API key configuration. Please contact support.';
-      case 'auth/app-deleted':
-        return 'Firebase app configuration error. Please contact support.';
       default:
         return `Authentication error (${errorCode}). Please try again or contact support.`;
     }
@@ -278,21 +275,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
             
             {/* Debug Button */}
             <button
-              onClick={() => setShowDebug(true)}
+              onClick={() => {
+                console.log('🔍 Testing Supabase configuration...');
+                supabaseService.debugConfig();
+              }}
               className="inline-flex items-center space-x-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <Bug className="w-3 h-3" />
-              <span>Debug Firebase Connection</span>
+              <span>Debug Supabase Config</span>
             </button>
           </div>
         </div>
       </div>
-
-      {/* Firebase Debug Modal */}
-      <FirebaseDebug 
-        isOpen={showDebug}
-        onClose={() => setShowDebug(false)}
-      />
     </div>
   );
 };

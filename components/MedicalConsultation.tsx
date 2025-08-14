@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Bot } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { firebaseService } from '../services/firebase';
+import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -38,10 +38,10 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
       } else {
         setResponse(result.formatted);
         
-        // Save to Firebase/localStorage
+        // Save to Supabase/localStorage
         setSaveStatus('saving');
         try {
-          await firebaseService.saveChat(
+          await supabaseService.saveChat(
             NavigationTab.DRUG_INFO,
             query,
             result.formatted
@@ -70,7 +70,7 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
       case 'saved':
         return { 
           type: 'success' as const, 
-          message: firebaseService.isEnabled() ? 'Consultation saved to your history' : 'Consultation saved locally'
+          message: supabaseService.isEnabled() ? 'Consultation saved to your history' : 'Consultation saved locally'
         };
       case 'error':
         return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
@@ -144,7 +144,7 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-700 dark:text-blue-300">
               💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
-              Your consultations will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+              Your consultations will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
             </p>
           </div>
         )}

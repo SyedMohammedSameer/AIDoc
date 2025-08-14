@@ -7,14 +7,14 @@ import { EmergencyGuidance } from './components/EmergencyGuidance';
 import { AuthModal } from './components/Auth/AuthModal';
 import { UserMenu } from './components/Auth/UserMenu';
 import { ChatHistory } from './components/ChatHistory';
-import { FirebaseDebug } from './components/FirebaseDebug';
+
 import { Alert } from './components/Alert';
 import { Heart, User } from 'lucide-react';
 import { NAVIGATION_ITEMS } from './constants';
 import { NavigationTab } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-import { firebaseService, type ChatData } from './services/firebase';
+import { supabaseService, type ChatData } from './services/supabase';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>(NavigationTab.DRUG_INFO);
@@ -35,40 +35,35 @@ const AppContent: React.FC = () => {
     // Add debug function to window for console access
     (window as any).debugVitaShifa = () => {
       console.log("=== VITASHIFA DEBUG INFO ===");
-      console.log("Firebase API Key:", import.meta.env.VITE_FIREBASE_API_KEY ? "✅ SET" : "❌ MISSING");
-      console.log("Firebase Auth Domain:", import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "❌ MISSING");
-      console.log("Firebase Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID || "❌ MISSING");
-      console.log("Firebase App ID:", import.meta.env.VITE_FIREBASE_APP_ID ? "✅ SET" : "❌ MISSING");
+      console.log("Supabase URL:", import.meta.env.VITE_SUPABASE_URL ? "✅ SET" : "❌ MISSING");
+      console.log("Supabase Anon Key:", import.meta.env.VITE_SUPABASE_ANON_KEY ? "✅ SET" : "❌ MISSING");
       console.log("Gemini API Key:", import.meta.env.VITE_GEMINI_API_KEY ? "✅ SET" : "❌ MISSING");
       
-      console.log("\n=== FIREBASE SERVICE STATUS ===");
-      console.log("Firebase Enabled:", firebaseService.isEnabled());
-      console.log("Current User:", firebaseService.getCurrentUser()?.email || "None");
+      console.log("\n=== SUPABASE SERVICE STATUS ===");
+      console.log("Supabase Enabled:", supabaseService.isEnabled());
+      console.log("Current User:", supabaseService.getCurrentUser()?.email || "None");
       
       console.log("\n=== PARTIAL VALUES ===");
-      if (import.meta.env.VITE_FIREBASE_API_KEY) {
-        console.log("API Key starts with:", import.meta.env.VITE_FIREBASE_API_KEY.substring(0, 10) + "...");
+      if (import.meta.env.VITE_SUPABASE_URL) {
+        console.log("Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
       }
-      if (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) {
-        console.log("Auth Domain:", import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
-      }
-      if (import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-        console.log("Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID);
+      if (import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.log("Anon Key starts with:", import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 10) + "...");
       }
       
       return "Debug info printed above ☝️";
     };
 
-    // Initialize Firebase and check for existing user
+    // Initialize Supabase and check for existing user
     initializeAuth();
   }, []);
 
   const initializeAuth = async () => {
     try {
-      await firebaseService.initialize();
+      await supabaseService.initialize();
       
       // Check if user is already signed in (from previous session)
-      const currentUser = firebaseService.getCurrentUser();
+      const currentUser = supabaseService.getCurrentUser();
       if (currentUser) {
         console.log('Found existing user session:', currentUser.email || 'Anonymous');
         setUser(currentUser);
@@ -79,7 +74,7 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
-      // If Firebase fails, still show auth modal for offline mode
+      // If Supabase fails, still show auth modal for offline mode
       setIsAuthModalOpen(true);
     } finally {
       setAuthInitialized(true);
@@ -225,9 +220,9 @@ const AppContent: React.FC = () => {
                 <div className="font-medium mb-2">System Status:</div>
                 <div className="space-y-1 text-left">
                   <div className="flex justify-between">
-                    <span>Firebase:</span>
-                    <span className={firebaseService.isEnabled() ? 'text-green-600' : 'text-red-600'}>
-                      {firebaseService.isEnabled() ? '✅ Connected' : '❌ Not Available'}
+                    <span>Supabase:</span>
+                    <span className={supabaseService.isEnabled() ? 'text-green-600' : 'text-red-600'}>
+                      {supabaseService.isEnabled() ? '✅ Connected' : '❌ Not Available'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -238,7 +233,7 @@ const AppContent: React.FC = () => {
                   </div>
                 </div>
                 
-                {!firebaseService.isEnabled() && (
+                {!supabaseService.isEnabled() && (
                   <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-yellow-800 dark:text-yellow-200 text-xs">
                     💡 Run <code>debugVitaShifa()</code> in console for details
                   </div>
@@ -291,7 +286,7 @@ const AppContent: React.FC = () => {
             <span>© 2025 {t('appTitle')}</span>
             {user && (
               <span>
-                {firebaseService.isEnabled() ? '☁️ Cloud Sync' : '💾 Local Storage'}
+                {supabaseService.isEnabled() ? '☁️ Cloud Sync' : '💾 Local Storage'}
               </span>
             )}
             <span>Built with care for your health</span>

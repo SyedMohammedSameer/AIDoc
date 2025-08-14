@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Phone, Clock } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { firebaseService } from '../services/firebase';
+import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -36,10 +36,10 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
       } else {
         setResponse(result.formatted);
         
-        // Save to Firebase/localStorage
+        // Save to Supabase/localStorage
         setSaveStatus('saving');
         try {
-          await firebaseService.saveChat(
+          await supabaseService.saveChat(
             NavigationTab.EMERGENCY_AID,
             situation,
             result.formatted
@@ -68,7 +68,7 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
       case 'saved':
         return { 
           type: 'success' as const, 
-          message: firebaseService.isEnabled() ? 'Emergency guidance saved to your history' : 'Emergency guidance saved locally'
+          message: supabaseService.isEnabled() ? 'Emergency guidance saved to your history' : 'Emergency guidance saved locally'
         };
       case 'error':
         return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
@@ -184,7 +184,7 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
             <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-700 dark:text-red-300">
                 💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
-                Your emergency guidance will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+                Your emergency guidance will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
               </p>
             </div>
           )}

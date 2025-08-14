@@ -1,6 +1,7 @@
+// components/Auth/UserMenu.tsx
 import React, { useState } from 'react';
 import { User, LogOut, History, Settings, ChevronDown } from 'lucide-react';
-import { firebaseService } from '../../services/firebase';
+import { supabaseService } from '../../services/supabase';
 
 interface UserMenuProps {
   user: any;
@@ -12,7 +13,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut, onShowHisto
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSignOut = async () => {
-    await firebaseService.signOut();
+    await supabaseService.signOut();
     onSignOut();
     setIsOpen(false);
   };

@@ -1,7 +1,7 @@
 // components/ChatHistory.tsx
 import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, Scan, Heart, AlertTriangle, Calendar, Search, Trash2 } from 'lucide-react';
-import { firebaseService, type ChatData } from '../services/firebase';
+import { supabaseService, type ChatData } from '../services/supabase';
 import { NavigationTab } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Alert } from './Alert';
@@ -30,7 +30,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({ isOpen, onClose, onCha
     setError(null);
 
     try {
-      const chatHistory = await firebaseService.getChatHistory(50);
+      const chatHistory = await supabaseService.getChatHistory(50);
       setChats(chatHistory);
     } catch (err) {
       setError('Failed to load chat history');
@@ -271,7 +271,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({ isOpen, onClose, onCha
               {filteredChats.length} of {chats.length} conversations
             </span>
             <span>
-              {firebaseService.isEnabled() ? 'Synced to cloud' : 'Stored locally'}
+              {supabaseService.isEnabled() ? 'Synced to cloud' : 'Stored locally'}
             </span>
           </div>
         </div>

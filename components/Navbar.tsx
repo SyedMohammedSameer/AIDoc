@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage, SUPPORTED_LANGUAGES } from '../contexts/LanguageContext';
 import { NAVIGATION_ITEMS } from '../constants';
 import { UserMenu } from './Auth/UserMenu';
-import { firebaseService } from '../services/firebase';
+import { supabaseService } from '../services/supabase';
 
 interface NavbarProps {
   activeTab: NavigationTab;
@@ -222,7 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-500 px-4">
-                  {firebaseService.isEnabled() ? '☁️ Cloud Sync Active' : '💾 Local Storage Mode'}
+                  {supabaseService.isEnabled() ? '☁️ Cloud Sync Active' : '💾 Local Storage Mode'}
                 </div>
               </div>
             )}

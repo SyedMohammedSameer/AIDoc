@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, Scan, X } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { firebaseService } from '../services/firebase';
+import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -60,11 +60,11 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
       } else {
         setResponse(result.formatted);
         
-        // Save to Firebase/localStorage
+        // Save to Supabase/localStorage
         setSaveStatus('saving');
         try {
           const queryText = `Image Analysis: ${prompt} [Image: ${image.file.name}]`;
-          await firebaseService.saveChat(
+          await supabaseService.saveChat(
             NavigationTab.IMAGE_ANALYSIS,
             queryText,
             result.formatted
@@ -93,7 +93,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
       case 'saved':
         return { 
           type: 'success' as const, 
-          message: firebaseService.isEnabled() ? 'Analysis saved to your history' : 'Analysis saved locally'
+          message: supabaseService.isEnabled() ? 'Analysis saved to your history' : 'Analysis saved locally'
         };
       case 'error':
         return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
@@ -201,7 +201,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <p className="text-sm text-purple-700 dark:text-purple-300">
                   💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
-                  Your image analysis will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+                  Your image analysis will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
                 </p>
               </div>
             )}
