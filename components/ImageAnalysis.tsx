@@ -1,17 +1,25 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, Scan, X } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { firebaseService } from '../services/firebase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
+import { NavigationTab } from '../types';
 import type { FormattedResponse } from '../types';
 
-export const ImageAnalysis: React.FC = () => {
+interface ImageAnalysisProps {
+  user?: any;
+  onChatSaved?: () => void;
+}
+
+export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved }) => {
   const [image, setImage] = useState<{ file: File; preview: string } | null>(null);
   const [prompt, setPrompt] = useState('Analyze this medical image and provide detailed observations about any visible abnormalities or findings.');
   const [response, setResponse] = useState<FormattedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (file: File) => {
@@ -43,6 +51,7 @@ export const ImageAnalysis: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setSaveStatus('idle');
 
     try {
       const result = await geminiService.analyzeImage(image.preview, image.file.type, prompt);
@@ -50,11 +59,46 @@ export const ImageAnalysis: React.FC = () => {
         setError(result.response.text);
       } else {
         setResponse(result.formatted);
+        
+        // Save to Firebase/localStorage
+        setSaveStatus('saving');
+        try {
+          const queryText = `Image Analysis: ${prompt} [Image: ${image.file.name}]`;
+          await firebaseService.saveChat(
+            NavigationTab.IMAGE_ANALYSIS,
+            queryText,
+            result.formatted
+          );
+          setSaveStatus('saved');
+          onChatSaved?.();
+          
+          // Auto-hide save status after 3 seconds
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (saveError) {
+          console.error('Failed to save chat:', saveError);
+          setSaveStatus('error');
+        }
       }
     } catch (err) {
       setError('Failed to analyze image. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getSaveStatusMessage = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return { type: 'info' as const, message: 'Saving image analysis...' };
+      case 'saved':
+        return { 
+          type: 'success' as const, 
+          message: firebaseService.isEnabled() ? 'Analysis saved to your history' : 'Analysis saved locally'
+        };
+      case 'error':
+        return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
+      default:
+        return null;
     }
   };
 
@@ -75,6 +119,14 @@ export const ImageAnalysis: React.FC = () => {
         title="Important: Not for Diagnosis"
         message="AI image analysis is experimental and not a diagnostic tool. Always consult qualified radiologists or medical specialists for proper diagnosis and interpretation."
       />
+
+      {/* Save Status */}
+      {getSaveStatusMessage() && (
+        <Alert 
+          type={getSaveStatusMessage()!.type}
+          message={getSaveStatusMessage()!.message}
+        />
+      )}
 
       {/* Upload Area */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
@@ -143,6 +195,16 @@ export const ImageAnalysis: React.FC = () => {
                 </>
               )}
             </button>
+
+            {/* User Context Info */}
+            {user && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <p className="text-sm text-purple-700 dark:text-purple-300">
+                  💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
+                  Your image analysis will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Phone, Clock } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { firebaseService } from '../services/firebase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
+import { NavigationTab } from '../types';
 import type { FormattedResponse } from '../types';
 
-export const EmergencyGuidance: React.FC = () => {
+interface EmergencyGuidanceProps {
+  user?: any;
+  onChatSaved?: () => void;
+}
+
+export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onChatSaved }) => {
   const [situation, setSituation] = useState('');
   const [response, setResponse] = useState<FormattedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +27,7 @@ export const EmergencyGuidance: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setSaveStatus('idle');
 
     try {
       const result = await geminiService.getEmergencyGuidance(situation);
@@ -26,11 +35,45 @@ export const EmergencyGuidance: React.FC = () => {
         setError(result.response.text);
       } else {
         setResponse(result.formatted);
+        
+        // Save to Firebase/localStorage
+        setSaveStatus('saving');
+        try {
+          await firebaseService.saveChat(
+            NavigationTab.EMERGENCY_AID,
+            situation,
+            result.formatted
+          );
+          setSaveStatus('saved');
+          onChatSaved?.();
+          
+          // Auto-hide save status after 3 seconds
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (saveError) {
+          console.error('Failed to save chat:', saveError);
+          setSaveStatus('error');
+        }
       }
     } catch (err) {
       setError('Failed to get emergency guidance. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getSaveStatusMessage = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return { type: 'info' as const, message: 'Saving emergency guidance...' };
+      case 'saved':
+        return { 
+          type: 'success' as const, 
+          message: firebaseService.isEnabled() ? 'Emergency guidance saved to your history' : 'Emergency guidance saved locally'
+        };
+      case 'error':
+        return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
+      default:
+        return null;
     }
   };
 
@@ -75,6 +118,14 @@ export const EmergencyGuidance: React.FC = () => {
           </div>
         }
       />
+
+      {/* Save Status */}
+      {getSaveStatusMessage() && (
+        <Alert 
+          type={getSaveStatusMessage()!.type}
+          message={getSaveStatusMessage()!.message}
+        />
+      )}
 
       {/* Quick Emergency Actions */}
       <div className="grid md:grid-cols-3 gap-4 mb-6">
@@ -127,6 +178,16 @@ export const EmergencyGuidance: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* User Context Info */}
+          {user && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <p className="text-sm text-red-700 dark:text-red-300">
+                💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
+                Your emergency guidance will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+              </p>
+            </div>
+          )}
         </form>
       </div>
 

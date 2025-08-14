@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { Send, Bot } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { firebaseService } from '../services/firebase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
 import { useLanguage } from '../contexts/LanguageContext';
+import { NavigationTab } from '../types';
 import type { FormattedResponse } from '../types';
 
-export const MedicalConsultation: React.FC = () => {
+interface MedicalConsultationProps {
+  user?: any;
+  onChatSaved?: () => void;
+}
+
+export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, onChatSaved }) => {
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState<FormattedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,6 +29,7 @@ export const MedicalConsultation: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setSaveStatus('idle');
 
     try {
       const result = await geminiService.getMedicalConsultation(query);
@@ -28,11 +37,45 @@ export const MedicalConsultation: React.FC = () => {
         setError(result.response.text);
       } else {
         setResponse(result.formatted);
+        
+        // Save to Firebase/localStorage
+        setSaveStatus('saving');
+        try {
+          await firebaseService.saveChat(
+            NavigationTab.DRUG_INFO,
+            query,
+            result.formatted
+          );
+          setSaveStatus('saved');
+          onChatSaved?.();
+          
+          // Auto-hide save status after 3 seconds
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (saveError) {
+          console.error('Failed to save chat:', saveError);
+          setSaveStatus('error');
+        }
       }
     } catch (err) {
       setError('Failed to get consultation. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getSaveStatusMessage = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return { type: 'info' as const, message: 'Saving consultation...' };
+      case 'saved':
+        return { 
+          type: 'success' as const, 
+          message: firebaseService.isEnabled() ? 'Consultation saved to your history' : 'Consultation saved locally'
+        };
+      case 'error':
+        return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
+      default:
+        return null;
     }
   };
 
@@ -53,6 +96,14 @@ export const MedicalConsultation: React.FC = () => {
         title="Medical Disclaimer"
         message={t('medicalDisclaimer')}
       />
+
+      {/* Save Status */}
+      {getSaveStatusMessage() && (
+        <Alert 
+          type={getSaveStatusMessage()!.type}
+          message={getSaveStatusMessage()!.message}
+        />
+      )}
 
       {/* Input Form */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 transition-colors duration-300">
@@ -87,6 +138,16 @@ export const MedicalConsultation: React.FC = () => {
             )}
           </button>
         </form>
+
+        {/* User Context Info */}
+        {user && (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
+              Your consultations will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Error */}

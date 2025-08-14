@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
-import { Menu, X, Moon, Sun, Monitor, Globe, Heart, ChevronDown } from 'lucide-react';
+import { Menu, X, Moon, Sun, Monitor, Globe, Heart, ChevronDown, User, LogIn } from 'lucide-react';
 import { NavigationTab } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage, SUPPORTED_LANGUAGES } from '../contexts/LanguageContext';
 import { NAVIGATION_ITEMS } from '../constants';
+import { UserMenu } from './Auth/UserMenu';
+import { firebaseService } from '../services/firebase';
 
 interface NavbarProps {
   activeTab: NavigationTab;
   onNavSelect: (tabId: NavigationTab) => void;
+  user?: any;
+  onSignOut?: () => void;
+  onShowHistory?: () => void;
+  onShowAuth?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onNavSelect }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  activeTab, 
+  onNavSelect, 
+  user, 
+  onSignOut, 
+  onShowHistory, 
+  onShowAuth 
+}) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
@@ -45,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onNavSelect }) => {
   };
 
   return (
-    <nav className="glass-effect sticky top-0 z-50 border-b border-white/20 backdrop-blur-md">
+    <nav className="glass-effect sticky top-0 z-40 border-b border-white/20 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -150,7 +163,25 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onNavSelect }) => {
                 </div>
               )}
             </div>
+
+            {/* User Menu or Sign In Button */}
+            {user ? (
+              <UserMenu 
+                user={user}
+                onSignOut={onSignOut || (() => {})}
+                onShowHistory={onShowHistory || (() => {})}
+              />
+            ) : (
+              <button
+                onClick={onShowAuth}
+                className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign In</span>
+              </button>
+            )}
             
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50"
@@ -183,6 +214,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onNavSelect }) => {
                 </div>
               </button>
             ))}
+
+            {/* Mobile User Section */}
+            {user && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                <div className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                  Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-500 px-4">
+                  {firebaseService.isEnabled() ? '☁️ Cloud Sync Active' : '💾 Local Storage Mode'}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -190,7 +233,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onNavSelect }) => {
       {/* Click outside to close dropdowns */}
       {(isLanguageMenuOpen || isThemeMenuOpen) && (
         <div 
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-30"
           onClick={() => {
             setIsLanguageMenuOpen(false);
             setIsThemeMenuOpen(false);

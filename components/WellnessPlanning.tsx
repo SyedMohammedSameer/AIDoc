@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { Heart, Target } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { firebaseService } from '../services/firebase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
 import { CHRONIC_CONDITIONS_OPTIONS } from '../constants';
+import { NavigationTab } from '../types';
 import type { HealthManagementInput, FormattedResponse } from '../types';
 
-export const WellnessPlanning: React.FC = () => {
+interface WellnessPlanningProps {
+  user?: any;
+  onChatSaved?: () => void;
+}
+
+export const WellnessPlanning: React.FC<WellnessPlanningProps> = ({ user, onChatSaved }) => {
   const [formData, setFormData] = useState<HealthManagementInput>({
     chronicConditions: [],
     currentSymptoms: '',
@@ -18,6 +25,7 @@ export const WellnessPlanning: React.FC = () => {
   const [response, setResponse] = useState<FormattedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const handleConditionToggle = (condition: string) => {
     setFormData(prev => ({
@@ -33,6 +41,7 @@ export const WellnessPlanning: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setSaveStatus('idle');
 
     // Include other condition if specified
     let finalConditions = [...formData.chronicConditions];
@@ -49,11 +58,51 @@ export const WellnessPlanning: React.FC = () => {
         setError(result.response.text);
       } else {
         setResponse(result.formatted);
+        
+        // Save to Firebase/localStorage
+        setSaveStatus('saving');
+        try {
+          const queryText = `Wellness Plan Request:
+Conditions: ${finalConditions.join(', ') || 'None'}
+Symptoms: ${payload.currentSymptoms || 'None'}
+Lifestyle: ${payload.lifestyleFactors || 'Not specified'}
+Goals: ${payload.healthGoals || 'General wellness'}`;
+
+          await firebaseService.saveChat(
+            NavigationTab.HEALTH_MANAGEMENT,
+            queryText,
+            result.formatted
+          );
+          setSaveStatus('saved');
+          onChatSaved?.();
+          
+          // Auto-hide save status after 3 seconds
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (saveError) {
+          console.error('Failed to save chat:', saveError);
+          setSaveStatus('error');
+        }
       }
     } catch (err) {
       setError('Failed to generate wellness plan. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getSaveStatusMessage = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return { type: 'info' as const, message: 'Saving wellness plan...' };
+      case 'saved':
+        return { 
+          type: 'success' as const, 
+          message: firebaseService.isEnabled() ? 'Wellness plan saved to your history' : 'Wellness plan saved locally'
+        };
+      case 'error':
+        return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
+      default:
+        return null;
     }
   };
 
@@ -74,6 +123,14 @@ export const WellnessPlanning: React.FC = () => {
         title="Wellness Guidance"
         message="AI-generated wellness plans are for informational purposes. Always discuss health plans with your healthcare provider before implementation."
       />
+
+      {/* Save Status */}
+      {getSaveStatusMessage() && (
+        <Alert 
+          type={getSaveStatusMessage()!.type}
+          message={getSaveStatusMessage()!.message}
+        />
+      )}
 
       {/* Form */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 space-y-6">
@@ -172,6 +229,16 @@ export const WellnessPlanning: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* User Context Info */}
+          {user && (
+            <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
+              <p className="text-sm text-pink-700 dark:text-pink-300">
+                💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> - 
+                Your wellness plan will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+              </p>
+            </div>
+          )}
         </form>
       </div>
 

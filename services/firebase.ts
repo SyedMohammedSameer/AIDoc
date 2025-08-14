@@ -1,8 +1,49 @@
-// Simplified Firebase service to avoid Vite dependency issues
-import type { ConsultationLog } from '../types';
+// services/firebase.ts - Simplified version with static imports
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { getFirestore, type Firestore, collection, doc, setDoc, updateDoc, increment, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import type { FormattedResponse, NavigationTab } from '../types';
 
-// Get Firebase configuration with better error handling
+// Types for our data structure
+export interface ChatData {
+  id: string;
+  type: NavigationTab;
+  timestamp: Date;
+  query: string;
+  response: FormattedResponse;
+  metadata: {
+    userAgent: string;
+    url: string;
+    duration?: number;
+  };
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  createdAt: Date;
+  lastLoginAt: Date;
+  chatCount: number;
+  isAnonymous: boolean;
+  preferences: {
+    language: string;
+    theme: string;
+  };
+}
+
+// Firebase instances
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let firestore: Firestore | null = null;
+let isInitialized = false;
+let currentUser: any = null;
+
+// Get Firebase configuration
 function getFirebaseConfig() {
+  console.log('🔍 Checking Firebase configuration...');
+  
   const config = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -12,157 +53,298 @@ function getFirebaseConfig() {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
   };
 
-  // Check if all required fields are present
-  const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+  const requiredFields = ['apiKey', 'authDomain', 'projectId', 'appId'];
   const missingFields = requiredFields.filter(field => !config[field as keyof typeof config]);
   
   if (missingFields.length > 0) {
-    console.warn('⚠️ Firebase configuration incomplete. Missing:', missingFields);
-    console.warn('Firebase features will be disabled. Data logging will not work.');
+    console.error('❌ Missing Firebase config:', missingFields);
     return null;
   }
 
-  console.log('✅ Firebase configuration loaded');
+  console.log('✅ Firebase config complete');
   return config;
 }
 
-// Initialize Firebase dynamically to avoid build issues
-let firebaseApp: any = null;
-let firestore: any = null;
-let analytics: any = null;
-let isFirebaseEnabled = false;
+// Local storage fallback
+class LocalStorageManager {
+  private static CHAT_KEY = 'vitashifa_chats';
+  private static USER_KEY = 'vitashifa_user';
 
-const initializeFirebase = async () => {
-  if (firebaseApp) return; // Already initialized
-  
+  static saveChat(chat: ChatData) {
+    try {
+      const chats = this.getChats();
+      chats.push(chat);
+      const recentChats = chats.slice(-50);
+      localStorage.setItem(this.CHAT_KEY, JSON.stringify(recentChats));
+    } catch (error) {
+      console.warn('Failed to save chat locally:', error);
+    }
+  }
+
+  static getChats(): ChatData[] {
+    try {
+      const stored = localStorage.getItem(this.CHAT_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  static saveUser(user: Partial<UserProfile>) {
+    try {
+      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.warn('Failed to save user locally:', error);
+    }
+  }
+
+  static getUser(): Partial<UserProfile> | null {
+    try {
+      const stored = localStorage.getItem(this.USER_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  static clearAll() {
+    localStorage.removeItem(this.CHAT_KEY);
+    localStorage.removeItem(this.USER_KEY);
+  }
+}
+
+// Initialize Firebase
+async function initializeFirebase(): Promise<boolean> {
+  if (isInitialized) {
+    console.log('✅ Firebase already initialized');
+    return true;
+  }
+
   const config = getFirebaseConfig();
-  if (!config) return;
+  if (!config) {
+    console.error('❌ Cannot initialize Firebase - missing configuration');
+    return false;
+  }
 
   try {
     console.log('🔄 Initializing Firebase...');
     
-    // Dynamic imports to avoid Vite build issues
-    const { initializeApp } = await import('firebase/app');
-    const { getFirestore, connectFirestoreEmulator } = await import('firebase/firestore');
+    // Initialize Firebase app
+    app = initializeApp(config);
+    console.log('📱 Firebase app created');
     
-    firebaseApp = initializeApp(config);
+    // Initialize Auth
+    auth = getAuth(app);
+    console.log('🔐 Firebase Auth created');
     
-    try {
-      firestore = getFirestore(firebaseApp);
-      console.log('✅ Firestore initialized');
-      isFirebaseEnabled = true;
-    } catch (firestoreError) {
-      console.warn('⚠️ Firestore initialization failed:', firestoreError);
-      firestore = null;
-    }
+    // Initialize Firestore
+    firestore = getFirestore(app);
+    console.log('🗄️ Firestore created');
     
-    // Initialize Analytics only in browser and if supported
-    if (typeof window !== 'undefined') {
-      try {
-        const { getAnalytics } = await import('firebase/analytics');
-        analytics = getAnalytics(firebaseApp);
-        console.log('✅ Analytics initialized');
-      } catch (analyticsError) {
-        console.warn('⚠️ Analytics initialization failed:', analyticsError);
-        analytics = null;
-      }
-    }
+    // Set up auth state listener
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      console.log('👤 Auth state:', user ? `${user.email || 'Anonymous'}` : 'No user');
+    });
+    
+    isInitialized = true;
+    console.log('✅ Firebase initialization complete');
+    return true;
+    
   } catch (error) {
-    console.warn('⚠️ Firebase initialization failed:', error);
-    console.warn('The app will work without Firebase features.');
+    console.error('❌ Firebase initialization failed:', error);
+    isInitialized = false;
+    return false;
   }
-};
+}
 
 export const firebaseService = {
-  isEnabled: () => isFirebaseEnabled,
-  
-  async logConsultation(log: Omit<ConsultationLog, 'id'>): Promise<string | null> {
-    if (!isFirebaseEnabled) {
-      // Try to initialize if not already done
-      await initializeFirebase();
+  // Initialize the service
+  async initialize(): Promise<boolean> {
+    console.log('🚀 FirebaseService.initialize() called');
+    const success = await initializeFirebase();
+    console.log('🏁 FirebaseService.initialize() completed - success:', success);
+    return success;
+  },
+
+  // Check if Firebase is available
+  isEnabled: (): boolean => {
+    const enabled = isInitialized && !!app && !!auth && !!firestore;
+    console.log('🔍 FirebaseService.isEnabled() called - returning:', enabled);
+    return enabled;
+  },
+
+  // Get current user
+  getCurrentUser: () => currentUser,
+
+  // Authentication Methods
+  async signInAnonymously() {
+    if (!auth) {
+      console.log('🔒 Creating offline anonymous session');
+      const anonymousUser = {
+        uid: 'offline_' + Date.now(),
+        email: null,
+        displayName: 'Anonymous User',
+        isAnonymous: true
+      };
+      LocalStorageManager.saveUser(anonymousUser);
+      return anonymousUser;
     }
-    
-    if (!firestore || !isFirebaseEnabled) {
-      console.log('📝 Firebase not available, skipping consultation log');
-      return null;
-    }
-    
+
     try {
-      console.log('📝 Logging consultation to Firebase...');
+      console.log('🔓 Signing in anonymously...');
+      const result = await signInAnonymously(auth);
+      console.log('✅ Anonymous sign-in successful');
+      return result.user;
+    } catch (error) {
+      console.error('❌ Anonymous sign-in failed:', error);
+      throw error;
+    }
+  },
+
+  async signInWithEmail(email: string, password: string) {
+    if (!auth) {
+      throw new Error('Firebase Auth not available - please check configuration');
+    }
+
+    try {
+      console.log('🔓 Signing in with email...');
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Email sign-in successful');
+      return result.user;
+    } catch (error) {
+      console.error('❌ Email sign-in failed:', error);
+      throw error;
+    }
+  },
+
+  async signUpWithEmail(email: string, password: string, displayName?: string) {
+    if (!auth) {
+      throw new Error('Firebase Auth not available - please check configuration');
+    }
+
+    try {
+      console.log('📝 Creating new user account...');
+      const result = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Dynamic import to avoid build issues
-      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      if (displayName) {
+        await updateProfile(result.user, { displayName });
+      }
       
-      const docRef = await addDoc(collection(firestore, 'consultations'), {
-        ...log,
-        timestamp: serverTimestamp(),
+      console.log('✅ Email signup successful');
+      return result.user;
+    } catch (error) {
+      console.error('❌ Email signup failed:', error);
+      throw error;
+    }
+  },
+
+  async signOut() {
+    if (auth) {
+      await signOut(auth);
+    }
+    LocalStorageManager.clearAll();
+    currentUser = null;
+    console.log('👋 User signed out');
+  },
+
+  // Chat Data Methods
+  async saveChat(type: NavigationTab, query: string, response: FormattedResponse): Promise<string | null> {
+    const chatData: ChatData = {
+      id: Date.now().toString(),
+      type,
+      timestamp: new Date(),
+      query,
+      response,
+      metadata: {
         userAgent: navigator.userAgent,
-        url: window.location.href
-      });
-      
-      console.log('✅ Consultation logged successfully');
-      return docRef.id;
-    } catch (error) {
-      console.error('❌ Error logging consultation:', error);
-      // Don't throw error, just log it - app should continue working
-      return null;
-    }
-  },
-
-  async getRecentConsultations(userId?: string, limitCount = 10): Promise<ConsultationLog[]> {
-    if (!isFirebaseEnabled) {
-      await initializeFirebase();
-    }
-    
-    if (!firestore || !isFirebaseEnabled) {
-      console.log('📖 Firebase not available, returning empty consultations');
-      return [];
-    }
-    
-    try {
-      console.log('📖 Fetching recent consultations...');
-      
-      // Dynamic import to avoid build issues
-      const { collection, query, orderBy, limit, getDocs, where } = await import('firebase/firestore');
-      
-      let q = query(
-        collection(firestore, 'consultations'),
-        orderBy('timestamp', 'desc'),
-        limit(limitCount)
-      );
-      
-      if (userId) {
-        q = query(
-          collection(firestore, 'consultations'),
-          where('userId', '==', userId),
-          orderBy('timestamp', 'desc'),
-          limit(limitCount)
-        );
+        url: window.location.href,
       }
-      
-      const querySnapshot = await getDocs(q);
-      const consultations = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ConsultationLog));
-      
-      console.log(`✅ Fetched ${consultations.length} consultations`);
-      return consultations;
-    } catch (error) {
-      console.error('❌ Error fetching consultations:', error);
-      return [];
-    }
-  },
+    };
 
-  // Analytics helpers
-  logEvent(eventName: string, parameters?: any) {
-    if (analytics && typeof window !== 'undefined') {
+    // Always save locally first
+    LocalStorageManager.saveChat(chatData);
+
+    // Try to save to Firebase if available
+    if (this.isEnabled() && firestore && currentUser) {
       try {
-        console.log('📊 Analytics event:', eventName, parameters);
-        // You can add actual analytics logging here if needed
+        const chatRef = doc(collection(firestore, 'users', currentUser.uid, 'chats'), chatData.id);
+        await setDoc(chatRef, {
+          ...chatData,
+          timestamp: serverTimestamp(),
+        });
+
+        const userRef = doc(firestore, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          chatCount: increment(1),
+          lastActivity: serverTimestamp(),
+        });
+
+        console.log('💾 Chat saved to Firebase:', chatData.id);
+        return chatData.id;
       } catch (error) {
-        console.warn('⚠️ Analytics logging failed:', error);
+        console.error('❌ Failed to save chat to Firebase:', error);
       }
+    }
+
+    console.log('💾 Chat saved locally:', chatData.id);
+    return chatData.id;
+  },
+
+  async getChatHistory(limitCount = 20): Promise<ChatData[]> {
+    if (this.isEnabled() && firestore && currentUser) {
+      try {
+        const chatsRef = collection(firestore, 'users', currentUser.uid, 'chats');
+        const q = query(chatsRef, orderBy('timestamp', 'desc'), limit(limitCount));
+        const snapshot = await getDocs(q);
+        
+        const chats = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate() || new Date()
+        })) as ChatData[];
+
+        console.log(`📚 Loaded ${chats.length} chats from Firebase`);
+        return chats;
+      } catch (error) {
+        console.error('❌ Failed to load chats from Firebase:', error);
+      }
+    }
+
+    const localChats = LocalStorageManager.getChats();
+    console.log(`📚 Loaded ${localChats.length} chats from local storage`);
+    return localChats.slice(-limitCount).reverse();
+  },
+
+  async createUserProfile(user: any): Promise<void> {
+    if (!this.isEnabled() || !firestore) return;
+
+    try {
+      const userProfile: Partial<UserProfile> = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+        chatCount: 0,
+        isAnonymous: user.isAnonymous,
+        preferences: {
+          language: 'en',
+          theme: 'system'
+        }
+      };
+
+      const userRef = doc(firestore, 'users', user.uid);
+      await setDoc(userRef, {
+        ...userProfile,
+        createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+      }, { merge: true });
+
+      console.log('👤 User profile created/updated');
+    } catch (error) {
+      console.error('❌ Failed to create user profile:', error);
     }
   }
 };
