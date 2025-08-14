@@ -14,7 +14,7 @@ export default defineConfig({
     }
   },
   
-  // Fix Firebase dependency issues
+  // Optimized dependencies
   optimizeDeps: {
     include: [
       'react', 
@@ -35,22 +35,20 @@ export default defineConfig({
     cors: true
   },
   
-  // Build configuration
+  // Production build configuration
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    minify: false,
+    sourcemap: false,
+    minify: 'esbuild',
     target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
     rollupOptions: {
-      external: (id) => {
-        // Don't bundle firebase - let it be handled by CDN or individual imports
-        return id === 'firebase' || id.startsWith('firebase/');
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          gemini: ['@google/genai'],
+          ui: ['lucide-react']
+        }
       }
     }
-  },
-  
-  // Additional Vite configuration to handle Firebase
-  ssr: {
-    noExternal: ['@google/genai']
   }
 });
