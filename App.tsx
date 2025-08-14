@@ -1,76 +1,88 @@
-
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
-import { DrugInfoQA } from './components/DrugInfoQA';
-import { MedicalImageAnalysis } from './components/MedicalImageAnalysis';
-import { HealthManagement } from './components/HealthManagement';
-import { EmergencyFirstAid } from './components/EmergencyFirstAid';
-import { LoadingSpinner } from './components/LoadingSpinner';
+import { MedicalConsultation } from './components/MedicalConsultation';
+import { ImageAnalysis } from './components/ImageAnalysis';
+import { WellnessPlanning } from './components/WellnessPlanning';
+import { EmergencyGuidance } from './components/EmergencyGuidance';
 import { Alert } from './components/Alert';
-import { APP_TITLE, NAVIGATION_ITEMS } from './constants';
+import { Heart } from 'lucide-react';
+import { APP_TITLE, APP_TAGLINE, NAVIGATION_ITEMS } from './constants';
 import { NavigationTab } from './types';
-import type { NavItem } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>(NavigationTab.DRUG_INFO);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // This state is still managed
-  const [isApiKeyMissing, setIsApiKeyMissing] = useState<boolean>(false);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
 
   useEffect(() => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey || apiKey === "YOUR_API_KEY" || apiKey === "MISSING_API_KEY") {
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const firebaseKey = import.meta.env.VITE_FIREBASE_API_KEY;
+    
+    if (!geminiKey || geminiKey === "your_gemini_api_key_here") {
       setIsApiKeyMissing(true);
-      console.warn("API_KEY is not configured. Application functionality will be limited.");
+    }
+    
+    if (!firebaseKey) {
+      console.warn("Firebase not configured - data logging will be disabled");
     }
   }, []);
 
-  const handleNavSelect = useCallback((tabId: NavigationTab) => {
-    setActiveTab(tabId);
-  }, []);
-
   const renderActiveTab = () => {
-    // THE CRUCIAL CHANGE: We no longer unmount the active tab component based on App's isLoading state.
-    // The individual tab components will handle their own internal loading display (e.g., spinner on button).
-    // if (isLoading && !isApiKeyMissing) return <div className="flex justify-center items-center h-64"><LoadingSpinner size="lg" /></div>;
-
     switch (activeTab) {
       case NavigationTab.DRUG_INFO:
-        return <DrugInfoQA setIsLoading={setIsLoading} />;
+        return <MedicalConsultation />;
       case NavigationTab.IMAGE_ANALYSIS:
-        return <MedicalImageAnalysis setIsLoading={setIsLoading} />;
+        return <ImageAnalysis />;
       case NavigationTab.HEALTH_MANAGEMENT:
-        return <HealthManagement setIsLoading={setIsLoading} />;
+        return <WellnessPlanning />;
       case NavigationTab.EMERGENCY_AID:
-        return <EmergencyFirstAid setIsLoading={setIsLoading} />;
+        return <EmergencyGuidance />;
       default:
-        return <DrugInfoQA setIsLoading={setIsLoading} />;
+        return <MedicalConsultation />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-lightbg">
-      <Navbar title={APP_TITLE} navItems={NAVIGATION_ITEMS} activeTab={activeTab} onNavSelect={handleNavSelect} />
-      <main className="flex-grow container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-teal-900 dark:to-blue-900">
+      <Navbar 
+        title={APP_TITLE}
+        tagline={APP_TAGLINE}
+        navItems={NAVIGATION_ITEMS} 
+        activeTab={activeTab} 
+        onNavSelect={setActiveTab} 
+      />
+      
+      <main className="container mx-auto px-4 py-8">
         {isApiKeyMissing && (
-          <Alert
-            type="error"
-            title="Configuration Error: API Key Missing"
-            message={
-              <>
-                <p>The Gemini API Key is not configured for this application.</p>
-                <p>Please ensure the <code>API_KEY</code> environment variable is set correctly for the application to function.</p>
-                <p>Without a valid API key, all features requiring AI interaction will fail or be disabled.</p>
-              </>
-            }
-            className="mb-6"
-          />
+          <div className="mb-6">
+            <Alert
+              type="error"
+              title="Configuration Required"
+              message="Please configure your GEMINI_API_KEY in the environment variables to use VitaShifa's AI features."
+            />
+          </div>
         )}
-        {/* Optional: A global, non-unmounting loading indicator could be placed here if desired, controlled by 'isLoading' */}
-        {/* For example: {isLoading && <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50"><LoadingSpinner size="lg" /></div>} */}
-        {renderActiveTab()}
+        
+        <div className="animate-fade-in">
+          {renderActiveTab()}
+        </div>
       </main>
-      <Footer />
+      
+      {/* Footer */}
+      <footer className="bg-white/50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 py-8 mt-16">
+        <div className="container mx-auto px-4 text-center space-y-4">
+          <div className="flex items-center justify-center space-x-2">
+            <Heart className="w-5 h-5 text-teal-500" />
+            <span className="font-semibold text-gray-700 dark:text-gray-300">VitaShifa</span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Your AI-powered health companion. Providing medical information, wellness guidance, and emergency assistance.
+            Always consult healthcare professionals for medical decisions.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            © 2025 VitaShifa. Built with care for your health and wellbeing.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

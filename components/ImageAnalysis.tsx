@@ -1,0 +1,163 @@
+import React, { useState, useRef } from 'react';
+import { Upload, Camera, Scan, X } from 'lucide-react';
+import { geminiService } from '../services/geminiService';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ResponseFormatter } from './ResponseFormatter';
+import { Alert } from './Alert';
+import type { FormattedResponse } from '../types';
+
+export const ImageAnalysis: React.FC = () => {
+  const [image, setImage] = useState<{ file: File; preview: string } | null>(null);
+  const [prompt, setPrompt] = useState('Analyze this medical image and provide detailed observations about any visible abnormalities or findings.');
+  const [response, setResponse] = useState<FormattedResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setError('Image size must be less than 10MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImage({
+        file,
+        preview: e.target?.result as string
+      });
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!image || isLoading) return;
+
+    setIsLoading(true);
+    setError(null);
+    setResponse(null);
+
+    try {
+      const result = await geminiService.analyzeImage(image.preview, image.file.type, prompt);
+      if (result.response.text.startsWith('API Error:')) {
+        setError(result.response.text);
+      } else {
+        setResponse(result.formatted);
+      }
+    } catch (err) {
+      setError('Failed to analyze image. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full">
+          <Scan className="w-5 h-5" />
+          <span className="font-medium">AI Medical Image Analysis</span>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400">Upload X-rays, CT scans, MRIs, or skin images for AI analysis</p>
+      </div>
+
+      {/* Critical Disclaimer */}
+      <Alert 
+        type="warning" 
+        title="Important: Not for Diagnosis"
+        message="AI image analysis is experimental and not a diagnostic tool. Always consult qualified radiologists or medical specialists for proper diagnosis and interpretation."
+      />
+
+      {/* Upload Area */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+        {!image ? (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-teal-500 transition-colors cursor-pointer"
+          >
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Medical Image</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Support for JPEG, PNG, WebP (max 10MB)
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Image Preview */}
+            <div className="relative">
+              <img 
+                src={image.preview} 
+                alt="Medical image for analysis"
+                className="w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-gray-700"
+              />
+              <button
+                onClick={() => setImage(null)}
+                className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Analysis Prompt */}
+            <div>
+              <label htmlFor="analysis-prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Analysis Instructions
+              </label>
+              <textarea
+                id="analysis-prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={3}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+            >
+              {isLoading ? (
+                <LoadingSpinner size="sm" className="text-white" />
+              ) : (
+                <>
+                  <Camera className="w-5 h-5" />
+                  <span>Analyze Image</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <Alert type="error" title="Analysis Error" message={error} />
+      )}
+
+      {/* Response */}
+      {response && (
+        <div className="animate-slide-up">
+          <ResponseFormatter response={response} />
+        </div>
+      )}
+    </div>
+  );
+};

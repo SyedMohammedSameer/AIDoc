@@ -1,14 +1,15 @@
 export enum NavigationTab {
-  DRUG_INFO = 'Drug Information & Q/A',
-  IMAGE_ANALYSIS = 'Medical Image Analysis',
-  HEALTH_MANAGEMENT = 'Health Management',
-  EMERGENCY_AID = 'Emergency & First Aid',
+  DRUG_INFO = 'consultation',
+  IMAGE_ANALYSIS = 'diagnosis',
+  HEALTH_MANAGEMENT = 'wellness',
+  EMERGENCY_AID = 'emergency',
 }
 
 export interface NavItem {
   id: NavigationTab;
   label: string;
-  icon?: React.ReactNode;
+  icon: string;
+  description: string;
 }
 
 export interface HealthManagementInput {
@@ -18,27 +19,31 @@ export interface HealthManagementInput {
   healthGoals: string;
 }
 
-export interface GroundingChunkWeb {
-  // Fix: Made uri optional to match the type from @google/genai
-  uri?: string;
-  // Fix: Made title optional to match the type from @google/genai
-  title?: string;
-}
-
-export interface GroundingChunk {
-  web: GroundingChunkWeb;
-}
-
-export interface GroundingMetadata {
-  groundingChunks?: GroundingChunk[];
-}
-
-export interface GeminiCandidate {
-  groundingMetadata?: GroundingMetadata;
-  // other candidate properties if needed
-}
-
 export interface GeminiResponse {
-  text: string; // Assuming text is always available directly
-  candidates?: GeminiCandidate[];
+  text: string;
+  candidates?: any[];
+}
+
+export interface ConsultationLog {
+  id: string;
+  timestamp: Date;
+  type: NavigationTab;
+  query: string;
+  response: string;
+  userId?: string;
+}
+
+export interface FormattedResponse {
+  title: string;
+  summary: string;
+  sections: ResponseSection[];
+  disclaimer: string;
+  sources?: string[];
+}
+
+export interface ResponseSection {
+  heading: string;
+  content: string;
+  type: 'info' | 'warning' | 'success' | 'list';
+  items?: string[];
 }
