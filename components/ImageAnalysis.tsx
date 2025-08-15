@@ -5,6 +5,7 @@ import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
+import { useLanguage } from '../contexts/LanguageContext';
 import { NavigationTab } from '../types';
 import type { FormattedResponse } from '../types';
 
@@ -21,6 +22,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { currentLanguage } = useLanguage();
 
   const handleImageUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -54,7 +56,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
     setSaveStatus('idle');
 
     try {
-      const result = await geminiService.analyzeImage(image.preview, image.file.type, prompt);
+      const result = await geminiService.analyzeImage(image.preview, image.file.type, prompt, currentLanguage.name);
       if (result.response.text.startsWith('API Error:')) {
         setError(result.response.text);
       } else {

@@ -20,7 +20,7 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
     setSaveStatus('idle');
 
     try {
-      const result = await geminiService.getMedicalConsultation(query);
+      const result = await geminiService.getMedicalConsultation(query, currentLanguage.name);
       if (result.response.text.startsWith('API Error:')) {
         setError(result.response.text);
       } else {

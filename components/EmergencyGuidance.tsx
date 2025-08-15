@@ -5,6 +5,7 @@ import { supabaseService } from '../services/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
+import { useLanguage } from '../contexts/LanguageContext';
 import { NavigationTab } from '../types';
 import type { FormattedResponse } from '../types';
 
@@ -19,6 +20,7 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const { currentLanguage } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +32,7 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
     setSaveStatus('idle');
 
     try {
-      const result = await geminiService.getEmergencyGuidance(situation);
+      const result = await geminiService.getEmergencyGuidance(situation, currentLanguage.name);
       if (result.response.text.startsWith('API Error:')) {
         setError(result.response.text);
       } else {

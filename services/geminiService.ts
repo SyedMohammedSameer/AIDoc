@@ -100,10 +100,12 @@ async function generateStructuredContent(prompt: string, systemInstruction: stri
 }
 
 export const geminiService = {
-  async getMedicalConsultation(query: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
+  async getMedicalConsultation(query: string, languageName: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
     const systemInstruction = `You are Dr. VitaShifa, an expert AI medical consultant.
 
-CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
+CRITICAL: You MUST respond in ${languageName}. Your entire response must be in ${languageName}.
+
+You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
 ${JSON_RESPONSE_SCHEMA}
 
@@ -133,10 +135,12 @@ Your response should be the JSON structure with relevant medical information.`;
     return { response, formatted };
   },
 
-  async analyzeImage(base64Image: string, mimeType: string, prompt: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
+  async analyzeImage(base64Image: string, mimeType: string, prompt: string, languageName: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
     const systemInstruction = `You are Dr. VitaShifa's medical imaging AI specialist.
 
-CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
+CRITICAL: You MUST respond in ${languageName}. Your entire response must be in ${languageName}.
+
+You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
 ${JSON_RESPONSE_SCHEMA}
 
@@ -189,7 +193,7 @@ Analyze the medical image and provide structured observations.`;
     }
   },
 
-  async getWellnessPlan(input: HealthManagementInput): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
+  async getWellnessPlan(input: HealthManagementInput, languageName: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
     const prompt = `Create a comprehensive wellness plan for someone with:
     
 Chronic Conditions: ${input.chronicConditions.join(', ') || 'None specified'}
@@ -199,7 +203,9 @@ Goals: ${input.healthGoals || 'General wellness'}`;
 
     const systemInstruction = `You are Dr. VitaShifa's wellness coach creating personalized health plans.
 
-CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
+CRITICAL: You MUST respond in ${languageName}. Your entire response must be in ${languageName}.
+
+You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
 ${JSON_RESPONSE_SCHEMA}
 
@@ -230,10 +236,12 @@ Rules for Wellness Plan responses:
     return { response, formatted };
   },
 
-  async getEmergencyGuidance(situation: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
+  async getEmergencyGuidance(situation: string, languageName: string): Promise<{ response: GeminiResponse; formatted: FormattedResponse }> {
     const systemInstruction = `You are Dr. VitaShifa's emergency response AI providing life-saving guidance.
 
-CRITICAL: You MUST respond with EXACTLY this JSON structure - no additional text before or after:
+CRITICAL: You MUST respond in ${languageName}. Your entire response must be in ${languageName}.
+
+You MUST respond with EXACTLY this JSON structure - no additional text before or after:
 
 ${JSON_RESPONSE_SCHEMA}
 

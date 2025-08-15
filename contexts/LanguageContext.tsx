@@ -34,11 +34,8 @@ type Translations = {
 
 const translations: Translations = {
   en: {
-    // App
     appTitle: 'VitaShifa',
     appTagline: 'Your AI-Powered Health Companion',
-    
-    // Navigation
     medicalConsultation: 'Medical Consultation',
     medicalConsultationDesc: 'Get expert medical guidance and drug information',
     aiDiagnosis: 'AI Diagnosis',
@@ -47,186 +44,76 @@ const translations: Translations = {
     wellnessPlanningDesc: 'Personalized health and wellness strategies',
     emergencyCare: 'Emergency Care',
     emergencyCareDesc: 'Immediate first aid and emergency guidance',
-    
-    // Common
-    loading: 'Loading...',
-    error: 'Error',
-    submit: 'Submit',
-    cancel: 'Cancel',
-    close: 'Close',
-    next: 'Next',
-    previous: 'Previous',
-    
-    // Medical Consultation
-    askAbout: 'What would you like to consult about?',
-    consultationPlaceholder: 'e.g., "I have a headache and feel nauseous. What could this be?" or "Tell me about the side effects of aspirin"',
-    getConsultation: 'Get Consultation',
-    
-    // Image Analysis
-    uploadImage: 'Upload Medical Image',
-    analysisInstructions: 'Analysis Instructions',
-    analyzeImage: 'Analyze Image',
-    
-    // Emergency
-    emergencyTitle: 'Emergency First Aid Guidance',
-    emergencyDescription: 'Immediate assistance while professional help is on the way',
-    callEmergency: 'CALL EMERGENCY SERVICES IMMEDIATELY!',
-    
-    // Disclaimers
-    medicalDisclaimer: 'This AI consultation is for informational purposes only and does not replace professional medical advice. Always consult with healthcare providers for medical concerns.',
-    emergencyDisclaimer: '🚨 FOR MEDICAL EMERGENCIES: Call 911 or your local emergency services immediately. VitaShifa is not for emergency situations.',
-    
-    // Settings
-    language: 'Language',
-    darkMode: 'Dark Mode',
+    signIn: 'Sign In',
+    signOut: 'Sign Out',
+    guestUser: 'Guest User',
+    signedIn: 'Signed In',
+    chatHistory: 'Chat History',
     lightMode: 'Light Mode',
+    darkMode: 'Dark Mode',
+    system: 'System',
+    medicalDisclaimer: 'This AI consultation is for informational purposes only and does not replace professional medical advice. Always consult with healthcare providers for medical concerns.',
+    welcomeTo: 'Welcome to VitaShifa',
+    getStarted: 'Get Started',
+    continueAsGuest: 'Continue as Guest',
+    signUpFree: 'Sign up for free or continue as guest',
+    initializing: 'Initializing VitaShifa...',
+    settingUp: 'Setting up your AI health companion',
+    welcomeMessage: 'Get expert medical guidance, analyze medical images, create wellness plans, and access emergency care assistance.',
+    systemStatus: 'System Status:',
+    supabase: 'Supabase:',
+    geminiAi: 'Gemini AI:',
+    connected: '✅ Connected',
+    notAvailable: '❌ Not Available',
+    ready: '✅ Ready',
+    notConfigured: '❌ Not Configured',
+    debugInstructions: '💡 Run debugVitaShifa() in console for details',
+    builtWithCare: 'Built with care for your health',
+    cloudSync: '☁️ Cloud Sync',
+    localStorage: '💾 Local Storage',
   },
   es: {
-    // App
     appTitle: 'VitaShifa',
-    appTagline: 'Tu Compañero de Salud con IA',
-    
-    // Navigation
+    appTagline: 'Tu Compañero de Salud Impulsado por IA',
     medicalConsultation: 'Consulta Médica',
     medicalConsultationDesc: 'Obtén orientación médica experta e información sobre medicamentos',
-    aiDiagnosis: 'Diagnóstico IA',
+    aiDiagnosis: 'Diagnóstico por IA',
     aiDiagnosisDesc: 'Analiza imágenes médicas con precisión de IA',
     wellnessPlanning: 'Planificación de Bienestar',
     wellnessPlanningDesc: 'Estrategias personalizadas de salud y bienestar',
-    emergencyCare: 'Cuidados de Emergencia',
+    emergencyCare: 'Atención de Emergencia',
     emergencyCareDesc: 'Primeros auxilios inmediatos y orientación de emergencia',
-    
-    // Common
-    loading: 'Cargando...',
-    error: 'Error',
-    submit: 'Enviar',
-    cancel: 'Cancelar',
-    close: 'Cerrar',
-    next: 'Siguiente',
-    previous: 'Anterior',
-    
-    // Medical Consultation
-    askAbout: '¿Sobre qué te gustaría consultar?',
-    consultationPlaceholder: 'ej., "Tengo dolor de cabeza y náuseas. ¿Qué podría ser?" o "Cuéntame sobre los efectos secundarios de la aspirina"',
-    getConsultation: 'Obtener Consulta',
-    
-    // Image Analysis
-    uploadImage: 'Subir Imagen Médica',
-    analysisInstructions: 'Instrucciones de Análisis',
-    analyzeImage: 'Analizar Imagen',
-    
-    // Emergency
-    emergencyTitle: 'Orientación de Primeros Auxilios de Emergencia',
-    emergencyDescription: 'Asistencia inmediata mientras llega la ayuda profesional',
-    callEmergency: '¡LLAMA A LOS SERVICIOS DE EMERGENCIA INMEDIATAMENTE!',
-    
-    // Disclaimers
-    medicalDisclaimer: 'Esta consulta de IA es solo para fines informativos y no reemplaza el consejo médico profesional. Siempre consulta con proveedores de atención médica para problemas médicos.',
-    emergencyDisclaimer: '🚨 PARA EMERGENCIAS MÉDICAS: Llama al 911 o a tus servicios de emergencia locales inmediatamente. VitaShifa no es para situaciones de emergencia.',
-    
-    // Settings
-    language: 'Idioma',
-    darkMode: 'Modo Oscuro',
+    signIn: 'Iniciar Sesión',
+    signOut: 'Cerrar Sesión',
+    guestUser: 'Usuario Invitado',
+    signedIn: 'Sesión Iniciada',
+    chatHistory: 'Historial de Chat',
     lightMode: 'Modo Claro',
+    darkMode: 'Modo Oscuro',
+    system: 'Sistema',
+    medicalDisclaimer: 'Esta consulta de IA es solo para fines informativos y no reemplaza el consejo médico profesional. Siempre consulte a los proveedores de atención médica para inquietudes médicas.',
+    welcomeTo: 'Bienvenido a VitaShifa',
+    getStarted: 'Empezar',
+    continueAsGuest: 'Continuar como invitado',
+    signUpFree: 'Regístrese gratis o continúe como invitado',
+    initializing: 'Inicializando VitaShifa...',
+    settingUp: 'Configurando su compañero de salud de IA',
+    welcomeMessage: 'Obtenga orientación médica experta, analice imágenes médicas, cree planes de bienestar y acceda a asistencia de atención de emergencia.',
+    systemStatus: 'Estado del Sistema:',
+    supabase: 'Supabase:',
+    geminiAi: 'IA de Gemini:',
+    connected: '✅ Conectado',
+    notAvailable: '❌ No Disponible',
+    ready: '✅ Listo',
+    notConfigured: '❌ No Configurado',
+    debugInstructions: '💡 Ejecute debugVitaShifa() en la consola para más detalles',
+    builtWithCare: 'Construido con cuidado para su salud',
+    cloudSync: '☁️ Sincronización en la Nube',
+    localStorage: '💾 Almacenamiento Local',
   },
-  fr: {
-    // App
-    appTitle: 'VitaShifa',
-    appTagline: 'Votre Compagnon Santé Alimenté par IA',
-    
-    // Navigation
-    medicalConsultation: 'Consultation Médicale',
-    medicalConsultationDesc: 'Obtenez des conseils médicaux experts et des informations sur les médicaments',
-    aiDiagnosis: 'Diagnostic IA',
-    aiDiagnosisDesc: 'Analysez les images médicales avec la précision de l\'IA',
-    wellnessPlanning: 'Planification du Bien-être',
-    wellnessPlanningDesc: 'Stratégies personnalisées de santé et bien-être',
-    emergencyCare: 'Soins d\'Urgence',
-    emergencyCareDesc: 'Premiers secours immédiats et conseils d\'urgence',
-    
-    // Common
-    loading: 'Chargement...',
-    error: 'Erreur',
-    submit: 'Soumettre',
-    cancel: 'Annuler',
-    close: 'Fermer',
-    next: 'Suivant',
-    previous: 'Précédent',
-    
-    // Medical Consultation
-    askAbout: 'Sur quoi aimeriez-vous consulter?',
-    consultationPlaceholder: 'ex., "J\'ai mal à la tête et des nausées. Qu\'est-ce que cela pourrait être?" ou "Parlez-moi des effets secondaires de l\'aspirine"',
-    getConsultation: 'Obtenir une Consultation',
-    
-    // Image Analysis
-    uploadImage: 'Télécharger une Image Médicale',
-    analysisInstructions: 'Instructions d\'Analyse',
-    analyzeImage: 'Analyser l\'Image',
-    
-    // Emergency
-    emergencyTitle: 'Conseils de Premiers Secours d\'Urgence',
-    emergencyDescription: 'Assistance immédiate en attendant l\'aide professionnelle',
-    callEmergency: 'APPELEZ LES SERVICES D\'URGENCE IMMÉDIATEMENT!',
-    
-    // Disclaimers
-    medicalDisclaimer: 'Cette consultation IA est à des fins informatives seulement et ne remplace pas les conseils médicaux professionnels. Consultez toujours les professionnels de la santé pour les préoccupations médicales.',
-    emergencyDisclaimer: '🚨 POUR LES URGENCES MÉDICALES: Appelez le 15 ou vos services d\'urgence locaux immédiatement. VitaShifa n\'est pas pour les situations d\'urgence.',
-    
-    // Settings
-    language: 'Langue',
-    darkMode: 'Mode Sombre',
-    lightMode: 'Mode Clair',
-  },
-  de: {
-    // App
-    appTitle: 'VitaShifa',
-    appTagline: 'Ihr KI-gestützter Gesundheitsbegleiter',
-    
-    // Navigation
-    medicalConsultation: 'Medizinische Beratung',
-    medicalConsultationDesc: 'Erhalten Sie fachkundige medizinische Beratung und Medikamenteninformationen',
-    aiDiagnosis: 'KI-Diagnose',
-    aiDiagnosisDesc: 'Analysieren Sie medizinische Bilder mit KI-Präzision',
-    wellnessPlanning: 'Wellness-Planung',
-    wellnessPlanningDesc: 'Personalisierte Gesundheits- und Wellness-Strategien',
-    emergencyCare: 'Notfallversorgung',
-    emergencyCareDesc: 'Sofortige Erste Hilfe und Notfallberatung',
-    
-    // Common
-    loading: 'Laden...',
-    error: 'Fehler',
-    submit: 'Senden',
-    cancel: 'Abbrechen',
-    close: 'Schließen',
-    next: 'Weiter',
-    previous: 'Zurück',
-    
-    // Medical Consultation
-    askAbout: 'Worüber möchten Sie sich beraten lassen?',
-    consultationPlaceholder: 'z.B. "Ich habe Kopfschmerzen und fühle mich übel. Was könnte das sein?" oder "Erzählen Sie mir von den Nebenwirkungen von Aspirin"',
-    getConsultation: 'Beratung Erhalten',
-    
-    // Image Analysis
-    uploadImage: 'Medizinisches Bild Hochladen',
-    analysisInstructions: 'Analyse-Anweisungen',
-    analyzeImage: 'Bild Analysieren',
-    
-    // Emergency
-    emergencyTitle: 'Notfall-Erste-Hilfe-Beratung',
-    emergencyDescription: 'Sofortige Hilfe, während professionelle Hilfe unterwegs ist',
-    callEmergency: 'RUFEN SIE SOFORT DEN NOTDIENST!',
-    
-    // Disclaimers
-    medicalDisclaimer: 'Diese KI-Beratung dient nur zu Informationszwecken und ersetzt nicht die professionelle medizinische Beratung. Konsultieren Sie bei medizinischen Problemen immer Gesundheitsdienstleister.',
-    emergencyDisclaimer: '🚨 FÜR MEDIZINISCHE NOTFÄLLE: Rufen Sie sofort 112 oder Ihre örtlichen Notdienste an. VitaShifa ist nicht für Notfallsituationen gedacht.',
-    
-    // Settings
-    language: 'Sprache',
-    darkMode: 'Dunkler Modus',
-    lightMode: 'Heller Modus',
-  },
-  // Add more languages as needed...
+  // Add other languages here...
 };
+
 
 interface LanguageContextType {
   currentLanguage: Language;
@@ -253,7 +140,6 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   const [currentLanguage, setCurrentLanguage] = useState<Language>(SUPPORTED_LANGUAGES[0]);
 
   useEffect(() => {
-    // Load saved language from localStorage
     const savedLanguage = localStorage.getItem('vitashifa-language');
     if (savedLanguage) {
       const found = SUPPORTED_LANGUAGES.find(lang => lang.code === savedLanguage);
@@ -261,7 +147,6 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         setCurrentLanguage(found);
       }
     } else {
-      // Detect browser language
       const browserLang = navigator.language.split('-')[0];
       const found = SUPPORTED_LANGUAGES.find(lang => lang.code === browserLang);
       if (found) {

@@ -6,6 +6,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
 import { CHRONIC_CONDITIONS_OPTIONS } from '../constants';
+import { useLanguage } from '../contexts/LanguageContext';
 import { NavigationTab } from '../types';
 import type { HealthManagementInput, FormattedResponse } from '../types';
 
@@ -26,6 +27,7 @@ export const WellnessPlanning: React.FC<WellnessPlanningProps> = ({ user, onChat
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const { currentLanguage } = useLanguage();
 
   const handleConditionToggle = (condition: string) => {
     setFormData(prev => ({
@@ -53,7 +55,7 @@ export const WellnessPlanning: React.FC<WellnessPlanningProps> = ({ user, onChat
     const payload = { ...formData, chronicConditions: finalConditions };
 
     try {
-      const result = await geminiService.getWellnessPlan(payload);
+      const result = await geminiService.getWellnessPlan(payload, currentLanguage.name);
       if (result.response.text.startsWith('API Error:')) {
         setError(result.response.text);
       } else {

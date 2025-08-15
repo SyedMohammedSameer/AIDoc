@@ -8,7 +8,6 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light dark" />
     
-    <!-- PWA Support -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -138,11 +137,7 @@
       [dir="rtl"] {
         text-align: right;
       }
-      
-      [dir="rtl"] .flex {
-        flex-direction: row-reverse;
-      }
-      
+
       /* High contrast mode support */
       @media (prefers-contrast: high) {
         .glass-effect {
@@ -172,7 +167,6 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     
-    <!-- Initialize theme as early as possible to prevent flash -->
     <script>
       (function() {
         const savedTheme = localStorage.getItem('vitashifa-theme') || 'system';
