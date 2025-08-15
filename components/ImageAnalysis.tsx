@@ -97,8 +97,8 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
         {!image ? (
-          <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-teal-500 transition-colors cursor-pointer">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-teal-500 dark:hover:border-teal-400 transition-colors cursor-pointer">
+            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">{t('uploadImage')}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('imageSupport')}</p>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} className="hidden" />
@@ -113,7 +113,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
             </div>
             <div>
               <label htmlFor="analysis-prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('analysisInstructions')}</label>
-              <textarea id="analysis-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white" disabled={isLoading} />
+              <textarea id="analysis-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400" disabled={isLoading} />
             </div>
             <button onClick={handleSubmit} disabled={isLoading} className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
               {isLoading ? (<LoadingSpinner size="sm" className="text-white" />) : (<><Camera className="w-5 h-5" /><span>{t('analyzeImage')}</span></>)}

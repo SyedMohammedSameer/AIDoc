@@ -85,10 +85,10 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
           <p className="font-bold text-lg">{t('callEmergency')}</p>
           <p>{t('emergencyInfo')}</p>
           <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg">
-            <p className="font-semibold mb-2">Call these numbers for immediate help:</p>
+            <p className="font-semibold mb-2 text-red-800 dark:text-red-200">Call these numbers for immediate help:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               {emergencyNumbers.map((item, index) => (
-                <div key={index} className="flex justify-between">
+                <div key={index} className="flex justify-between text-red-700 dark:text-red-300">
                   <span>{item.country}:</span>
                   <span className="font-bold">{item.number}</span>
                 </div>
@@ -116,7 +116,7 @@ export const EmergencyGuidance: React.FC<EmergencyGuidanceProps> = ({ user, onCh
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="emergency-situation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Describe the Emergency Situation</label>
-            <textarea id="emergency-situation" value={situation} onChange={(e) => setSituation(e.target.value)} placeholder="e.g., 'Person is choking on food', 'Severe bleeding from arm cut', 'Person unconscious but breathing', 'Possible heart attack symptoms'" rows={4} className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white resize-none" disabled={isLoading} />
+            <textarea id="emergency-situation" value={situation} onChange={(e) => setSituation(e.target.value)} placeholder="e.g., 'Person is choking on food', 'Severe bleeding from arm cut', 'Person unconscious but breathing', 'Possible heart attack symptoms'" rows={4} className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none" disabled={isLoading} />
           </div>
           <button type="submit" disabled={!situation.trim() || isLoading} className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
             {isLoading ? (<LoadingSpinner size="sm" className="text-white" />) : (<><AlertTriangle className="w-5 h-5" /><span>{t('getEmergencyGuidance')}</span></>)}

@@ -82,7 +82,15 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="consultation-query" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('askAbout')}</label>
-            <textarea id="consultation-query" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('consultationPlaceholder')} rows={4} className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white resize-none" disabled={isLoading} />
+            <textarea 
+              id="consultation-query" 
+              value={query} 
+              onChange={(e) => setQuery(e.target.value)} 
+              placeholder={t('consultationPlaceholder')} 
+              rows={4} 
+              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none" 
+              disabled={isLoading} 
+            />
           </div>
           <button type="submit" disabled={!query.trim() || isLoading} className="w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
             {isLoading ? (<LoadingSpinner size="sm" className="text-white" />) : (<><Send className="w-5 h-5" /><span>{t('getConsultation')}</span></>)}
