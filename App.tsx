@@ -8,7 +8,7 @@ import { UserMenu } from './components/Auth/UserMenu';
 import { ChatHistory } from './components/ChatHistory';
 
 import { Alert } from './components/Alert';
-import { Heart, User, ChevronDown, Globe, Sun, Moon, Monitor, LogIn, Menu, X } from 'lucide-react';
+import { Heart, ChevronDown, Globe, Sun, Moon, Monitor, LogIn, Menu, X } from 'lucide-react';
 import { NAVIGATION_ITEMS } from './constants';
 import { NavigationTab } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -337,7 +337,7 @@ const AppContent: React.FC = () => {
                 >
                   {t('getStarted')}
                 </button>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('signUpFree')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Create an account to access all AI health features</p>
               </div>
             </div>
           </div>

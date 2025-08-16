@@ -84,7 +84,7 @@ function getSupabaseConfig() {
   return { url, anonKey };
 }
 
-// Local storage fallback
+// Local storage fallback (only for development/testing without Supabase)
 class LocalStorageManager {
   private static CHAT_KEY = 'vitashifa_chats';
   private static USER_KEY = 'vitashifa_user';
@@ -150,7 +150,7 @@ async function initializeSupabase(): Promise<boolean> {
 
   const config = getSupabaseConfig();
   if (!config) {
-    console.warn('⚠️ Supabase not configured - using local storage only');
+    console.warn('⚠️ Supabase not configured - limited functionality available');
     return false;
   }
 
@@ -220,27 +220,10 @@ export const supabaseService = {
   // Get current user
   getCurrentUser: () => currentUser,
 
-  // Sign in anonymously (local only)
-  async signInAnonymously() {
-    console.log('🔒 Creating anonymous session...');
-    
-    const anonymousUser = {
-      id: 'anon_' + Date.now(),
-      email: null,
-      user_metadata: { display_name: 'Guest User' },
-      isAnonymous: true
-    };
-    
-    LocalStorageManager.saveUser(anonymousUser);
-    currentUser = anonymousUser as any;
-    console.log('✅ Anonymous session created');
-    return anonymousUser;
-  },
-
   // Sign in with email
   async signInWithEmail(email: string, password: string) {
     if (!supabase) {
-      throw new Error('Supabase not configured. Please check your environment variables.');
+      throw new Error('Authentication service not available. Please check your configuration.');
     }
 
     try {
@@ -284,15 +267,13 @@ export const supabaseService = {
   // Sign up with email
   async signUpWithEmail(email: string, password: string, displayName?: string) {
     if (!supabase) {
-      console.error('❌ Supabase client not available');
-      throw new Error('Supabase not available - please check configuration');
+      throw new Error('Authentication service not available. Please check your configuration.');
     }
 
     try {
       console.log('📝 Creating new user account...');
       console.log('📧 Email:', email);
       console.log('👤 Display Name:', displayName);
-      console.log('🔑 Password length:', password.length);
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -309,61 +290,19 @@ export const supabaseService = {
         throw error;
       }
       
-      console.log('✅ Auth signup successful, user data:', data);
+      console.log('✅ Auth signup successful');
       
-      // ===================================================================
-      // DELETE THE ENTIRE BLOCK BELOW. IT IS NOW HANDLED BY THE TRIGGER.
-      // ===================================================================
       if (data.user) {
-        try {
-          console.log('👤 Creating user profile for:', data.user.id);
-          
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              display_name: displayName || data.user.email?.split('@')[0] || null,
-              avatar_url: data.user.user_metadata?.avatar_url || null,
-              last_login_at: new Date().toISOString(),
-              chat_count: 0,
-              is_anonymous: false,
-              preferences: { language: 'en', theme: 'system' }
-            });
-
-          if (profileError) {
-            console.error('❌ Failed to create user profile:', profileError);
-            console.error('❌ Profile error details:', {
-              code: profileError.code,
-              message: profileError.message,
-              details: profileError.details,
-              hint: profileError.hint
-            });
-            // Don't throw here - user is still created in auth
-          } else {
-            console.log('✅ User profile created successfully');
-          }
-        } catch (profileError) {
-          console.error('❌ Profile creation failed:', profileError);
-        }
-      } else {
-        console.warn('⚠️ No user data returned from auth signup');
+        currentUser = data.user;
+        console.log('👤 User account created:', data.user.email);
+        
+        // Create user profile
+        await this.createUserProfile(data.user);
       }
-      // ===================================================================
-      // END OF BLOCK TO DELETE
-      // ===================================================================
       
-      console.log('✅ Email signup successful');
       return data.user;
     } catch (error: any) {
       console.error('❌ Email signup failed:', error);
-      console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        details: error.details
-      });
       throw error;
     }
   },
@@ -394,12 +333,12 @@ export const supabaseService = {
 
   // Create or update user profile
   async createUserProfile(user: any): Promise<void> {
-    if (!supabase || !user || user.id?.startsWith('anon_')) {
+    if (!supabase || !user) {
       return;
     }
 
     try {
-      console.log('👤 Upserting user profile...');
+      console.log('👤 Creating user profile...');
       
       const { error } = await supabase
         .from('users')
@@ -419,9 +358,9 @@ export const supabaseService = {
         });
 
       if (error) {
-        console.error('❌ Profile upsert error:', error);
+        console.error('❌ Profile creation error:', error);
       } else {
-        console.log('✅ Profile upserted successfully');
+        console.log('✅ Profile created successfully');
       }
     } catch (error) {
       console.error('❌ Profile operation failed:', error);
@@ -442,11 +381,8 @@ export const supabaseService = {
       }
     };
 
-    // Always save locally
-    LocalStorageManager.saveChat(chatData);
-
-    // Save to Supabase if available
-    if (supabase && currentUser && !currentUser.id?.startsWith('anon_')) {
+    // Save to Supabase if available and user is authenticated
+    if (supabase && currentUser) {
       try {
         const { error } = await supabase
           .from('chats')
@@ -461,12 +397,20 @@ export const supabaseService = {
 
         if (error) {
           console.error('⚠️ Failed to save chat to cloud:', error);
+          // Fallback to local storage
+          LocalStorageManager.saveChat(chatData);
         } else {
           console.log('✅ Chat saved to cloud');
         }
       } catch (error) {
         console.error('⚠️ Chat save error:', error);
+        // Fallback to local storage
+        LocalStorageManager.saveChat(chatData);
       }
+    } else {
+      // Fallback to local storage when Supabase is not available
+      LocalStorageManager.saveChat(chatData);
+      console.log('💾 Chat saved locally');
     }
 
     return chatData.id;
@@ -474,8 +418,8 @@ export const supabaseService = {
 
   // Get chat history
   async getChatHistory(limit = 20): Promise<ChatData[]> {
-    // Try Supabase first
-    if (supabase && currentUser && !currentUser.id?.startsWith('anon_')) {
+    // Try Supabase first if available and user is authenticated
+    if (supabase && currentUser) {
       try {
         const { data, error } = await supabase
           .from('chats')
@@ -505,13 +449,18 @@ export const supabaseService = {
     return LocalStorageManager.getChats().slice(-limit).reverse();
   },
 
-  // Sync local data to cloud
+  // Sync local data to cloud (when user signs in)
   async syncLocalDataToSupabase() {
-    if (!supabase || !currentUser || currentUser.id?.startsWith('anon_')) {
+    if (!supabase || !currentUser) {
       return;
     }
 
     const localChats = LocalStorageManager.getChats();
+    if (localChats.length === 0) {
+      console.log('📭 No local chats to sync');
+      return;
+    }
+
     console.log(`🔄 Syncing ${localChats.length} local chats...`);
 
     for (const chat of localChats) {
@@ -522,6 +471,8 @@ export const supabaseService = {
       }
     }
 
-    console.log('✅ Sync complete');
+    // Clear local storage after successful sync
+    LocalStorageManager.clearAll();
+    console.log('✅ Sync complete, local storage cleared');
   }
 };

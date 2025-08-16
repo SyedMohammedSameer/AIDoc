@@ -34,20 +34,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
     onClose();
   };
 
-  const handleAnonymousSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const user = await supabaseService.signInAnonymously();
-      onAuthSuccess(user);
-      handleClose();
-    } catch (err) {
-      setError('Failed to create anonymous session. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -98,55 +84,111 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Sign in to save your chat history and access personalized features</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Sign in to access VitaShifa's AI health features and save your consultation history</p>
         </div>
+        
         <div className="p-6">
           {error && (<Alert type="error" message={error} className="mb-4" />)}
-          <div className="mb-6">
-            <button onClick={handleAnonymousSignIn} disabled={isLoading} className="w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
-              {isLoading ? (<LoadingSpinner size="sm" className="text-white" />) : (<><User className="w-5 h-5" /><span>{t('continueAsGuest')}</span></>)}
+          
+          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1 mb-6">
+            <button 
+              onClick={() => setMode('signin')} 
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${ 
+                mode === 'signin' 
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+                  : 'text-gray-600 dark:text-gray-400' 
+              }`}
+            >
+              {t('signIn')}
             </button>
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Quick access without registration</p>
+            <button 
+              onClick={() => setMode('signup')} 
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${ 
+                mode === 'signup' 
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+                  : 'text-gray-600 dark:text-gray-400' 
+              }`}
+            >
+              Sign Up
+            </button>
           </div>
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600"></div></div>
-            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-800 text-gray-500">or</span></div>
-          </div>
-          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1 mb-4">
-            <button onClick={() => setMode('signin')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${ mode === 'signin' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400' }`}>{t('signIn')}</button>
-            <button onClick={() => setMode('signup')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${ mode === 'signup' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400' }`}>Sign Up</button>
-          </div>
+
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {mode === 'signup' && (
               <div>
                 <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                 <div className="relative">
                   <User className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input id="displayName" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" placeholder="Enter your full name" required />
+                  <input 
+                    id="displayName" 
+                    type="text" 
+                    value={displayName} 
+                    onChange={(e) => setDisplayName(e.target.value)} 
+                    className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" 
+                    placeholder="Enter your full name" 
+                    required 
+                  />
                 </div>
               </div>
             )}
+            
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
               <div className="relative">
                 <Mail className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" placeholder="Enter your email" required />
+                <input 
+                  id="email" 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" 
+                  placeholder="Enter your email" 
+                  required 
+                />
               </div>
             </div>
+            
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
               <div className="relative">
                 <Lock className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" placeholder="Enter your password" minLength={6} required />
+                <input 
+                  id="password" 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className="w-full ps-10 pe-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white" 
+                  placeholder="Enter your password" 
+                  minLength={6} 
+                  required 
+                />
               </div>
             </div>
-            <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
-              {isLoading ? (<LoadingSpinner size="sm" className="text-white" />) : (<>{mode === 'signin' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}<span>{mode === 'signin' ? t('signIn') : 'Create Account'}</span></>)}
+            
+            <button 
+              type="submit" 
+              disabled={isLoading} 
+              className="w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse"
+            >
+              {isLoading ? (
+                <LoadingSpinner size="sm" className="text-white" />
+              ) : (
+                <>
+                  {mode === 'signin' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                  <span>{mode === 'signin' ? t('signIn') : 'Create Account'}</span>
+                </>
+              )}
             </button>
           </form>
+          
           <div className="mt-6 text-center space-y-3">
-            <p className="text-xs text-gray-500 dark:text-gray-400">By continuing, you agree to our Terms of Service and Privacy Policy</p>
-            <button onClick={() => supabaseService.debugConfig()} className="inline-flex items-center space-x-1 rtl:space-x-reverse text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              By continuing, you agree to our Terms of Service and Privacy Policy
+            </p>
+            <button 
+              onClick={() => supabaseService.debugConfig()} 
+              className="inline-flex items-center space-x-1 rtl:space-x-reverse text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
               <Bug className="w-3 h-3" />
               <span>Debug Supabase Config</span>
             </button>
