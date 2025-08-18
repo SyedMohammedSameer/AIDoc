@@ -13,74 +13,72 @@ import { NAVIGATION_ITEMS } from './constants';
 import { NavigationTab } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { LanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from './contexts/LanguageContext';
-import { supabaseService, type ChatData } from './services/supabase';
+import { firebaseService, type ChatData } from './services/firebaseService';
+import type { User } from 'firebase/auth';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>(NavigationTab.DRUG_INFO);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [chatUpdateCounter, setChatUpdateCounter] = useState(0);
+  const [selectedChat, setSelectedChat] = useState<ChatData | null>(null);
+
 
   const { t, currentLanguage, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    
+
     if (!geminiKey || geminiKey === "your_gemini_api_key_here") {
       setIsApiKeyMissing(true);
     }
 
-    (window as any).debugVitaShifa = () => {
-      console.log("=== VITASHIFA DEBUG INFO ===");
-      console.log("Supabase URL:", import.meta.env.VITE_SUPABASE_URL ? "✅ SET" : "❌ MISSING");
-      console.log("Supabase Anon Key:", import.meta.env.VITE_SUPABASE_ANON_KEY ? "✅ SET" : "❌ MISSING");
-      console.log("Gemini API Key:", import.meta.env.VITE_GEMINI_API_KEY ? "✅ SET" : "❌ MISSING");
-      console.log("\n=== SUPABASE SERVICE STATUS ===");
-      console.log("Supabase Enabled:", supabaseService.isEnabled());
-      console.log("Current User:", supabaseService.getCurrentUser()?.email || "None");
-    };
+    firebaseService.initialize();
 
-    initializeAuth();
-  }, []);
-
-  const initializeAuth = async () => {
-    try {
-      await supabaseService.initialize();
-      const currentUser = supabaseService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
+    const unsubscribe = firebaseService.onAuthStateChanged((user) => {
+      setUser(user);
+      setAuthInitialized(true);
+      if (!user) {
         setIsAuthModalOpen(true);
       }
-    } catch (error) {
-      console.error('Auth initialization error:', error);
-      setIsAuthModalOpen(true);
-    } finally {
-      setAuthInitialized(true);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleAuthSuccess = (authenticatedUser: any) => {
     setUser(authenticatedUser);
     setIsAuthModalOpen(false);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await firebaseService.signOut();
     setUser(null);
     setIsAuthModalOpen(true);
   };
 
-  const handleChatSelect = (chat: ChatData) => {
-    setIsChatHistoryOpen(false);
-    setActiveTab(chat.type);
+  const handleNavSelect = (tab: NavigationTab) => {
+    setSelectedChat(null); // Clear selected chat when switching tabs manually
+    setActiveTab(tab);
+  };
+  
+  const handleChatSaved = () => {
+    setChatUpdateCounter(prev => prev + 1);
   };
 
+  const handleChatSelect = (chat: ChatData) => {
+    setSelectedChat(chat);
+    setActiveTab(chat.type);
+    setIsChatHistoryOpen(false);
+  };
+  
   const getThemeIcon = () => {
     switch(theme) {
       case 'light': return <Sun className="h-4 w-4" />;
@@ -100,7 +98,7 @@ const AppContent: React.FC = () => {
   };
 
   const renderActiveTab = () => {
-    const commonProps = { user, onChatSaved: () => {} };
+    const commonProps = { user, onChatSaved: handleChatSaved, selectedChat: selectedChat };
     switch (activeTab) {
       case NavigationTab.DRUG_INFO: return <MedicalConsultation {...commonProps} />;
       case NavigationTab.IMAGE_ANALYSIS: return <ImageAnalysis {...commonProps} />;
@@ -128,12 +126,12 @@ const AppContent: React.FC = () => {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-1">
               {NAVIGATION_ITEMS.map((item) => (
-                <button 
-                  key={item.id} 
-                  onClick={() => setActiveTab(item.id)} 
+                <button
+                  key={item.id}
+                  onClick={() => handleNavSelect(item.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
-                    activeTab === item.id 
-                      ? 'bg-teal-500 text-white shadow-lg' 
+                    activeTab === item.id
+                      ? 'bg-teal-500 text-white shadow-lg'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
@@ -146,8 +144,8 @@ const AppContent: React.FC = () => {
             <div className="flex items-center gap-2">
               {/* Language Selector */}
               <div className="relative hidden sm:block">
-                <button 
-                  onClick={() => setIsLanguageMenuOpen(!isLanguageMenuOpen)} 
+                <button
+                  onClick={() => setIsLanguageMenuOpen(!isLanguageMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <Globe className="h-4 w-4 text-gray-700 dark:text-gray-300" />
@@ -157,9 +155,9 @@ const AppContent: React.FC = () => {
                 {isLanguageMenuOpen && (
                   <div className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto z-50">
                     {SUPPORTED_LANGUAGES.map((lang) => (
-                      <button 
-                        key={lang.code} 
-                        onClick={() => { setLanguage(lang); setIsLanguageMenuOpen(false); }} 
+                      <button
+                        key={lang.code}
+                        onClick={() => { setLanguage(lang); setIsLanguageMenuOpen(false); }}
                         className={`w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors ${
                           currentLanguage.code === lang.code ? 'bg-teal-50 dark:bg-teal-900/30' : ''
                         }`}
@@ -174,11 +172,11 @@ const AppContent: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Theme Selector */}
               <div className="relative hidden sm:block">
-                <button 
-                  onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)} 
+                <button
+                  onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <span className="text-gray-700 dark:text-gray-300">{getThemeIcon()}</span>
@@ -191,9 +189,9 @@ const AppContent: React.FC = () => {
                       { key: 'dark', icon: <Moon className="h-4 w-4" />, label: t('darkMode') },
                       { key: 'system', icon: <Monitor className="h-4 w-4" />, label: t('system') }
                     ].map((themeOption) => (
-                      <button 
-                        key={themeOption.key} 
-                        onClick={() => { setTheme(themeOption.key as any); setIsThemeMenuOpen(false); }} 
+                      <button
+                        key={themeOption.key}
+                        onClick={() => { setTheme(themeOption.key as any); setIsThemeMenuOpen(false); }}
                         className={`w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors ${
                           theme === themeOption.key ? 'bg-teal-50 dark:bg-teal-900/30' : ''
                         }`}
@@ -205,13 +203,13 @@ const AppContent: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* User Menu */}
               {authInitialized && user ? (
                 <UserMenu user={user} onSignOut={handleSignOut} onShowHistory={() => setIsChatHistoryOpen(true)} />
               ) : authInitialized ? (
-                <button 
-                  onClick={() => setIsAuthModalOpen(true)} 
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-semibold"
                 >
                   <LogIn className="w-4 h-4" />
@@ -220,27 +218,27 @@ const AppContent: React.FC = () => {
               ) : (
                 <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
               )}
-              
+
               {/* Mobile Menu Button */}
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="lg:hidden p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
               >
                 {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
-          
+
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <div className="lg:hidden pb-4 pt-2 space-y-2">
               {NAVIGATION_ITEMS.map((item) => (
-                <button 
-                  key={item.id} 
-                  onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} 
+                <button
+                  key={item.id}
+                  onClick={() => { handleNavSelect(item.id); setIsMobileMenuOpen(false); }}
                   className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-3 ${
-                    activeTab === item.id 
-                      ? 'bg-teal-500 text-white' 
+                    activeTab === item.id
+                      ? 'bg-teal-500 text-white'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
@@ -251,12 +249,12 @@ const AppContent: React.FC = () => {
                   </div>
                 </button>
               ))}
-              
+
               {/* Mobile Settings */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-2">
                 {/* Language */}
-                <button 
-                  onClick={() => { setIsLanguageMenuOpen(!isLanguageMenuOpen); setIsThemeMenuOpen(false); }} 
+                <button
+                  onClick={() => { setIsLanguageMenuOpen(!isLanguageMenuOpen); setIsThemeMenuOpen(false); }}
                   className="w-full px-4 py-2 flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                   <span className="font-medium">Language</span>
@@ -265,10 +263,10 @@ const AppContent: React.FC = () => {
                     <span className="text-sm">{currentLanguage.nativeName}</span>
                   </span>
                 </button>
-                
+
                 {/* Theme */}
-                <button 
-                  onClick={() => { setIsThemeMenuOpen(!isThemeMenuOpen); setIsLanguageMenuOpen(false); }} 
+                <button
+                  onClick={() => { setIsThemeMenuOpen(!isThemeMenuOpen); setIsLanguageMenuOpen(false); }}
                   className="w-full px-4 py-2 flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                   <span className="font-medium">Theme</span>
@@ -285,7 +283,7 @@ const AppContent: React.FC = () => {
           <div className="fixed inset-0 z-30" onClick={() => { setIsLanguageMenuOpen(false); setIsThemeMenuOpen(false); }} />
         )}
       </nav>
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         {!authInitialized ? (
           <div className="flex items-center justify-center min-h-[50vh]">
@@ -312,9 +310,9 @@ const AppContent: React.FC = () => {
                 <div className="font-medium mb-2 text-gray-900 dark:text-white">{t('systemStatus')}</div>
                 <div className="space-y-1 text-start">
                   <div className="flex justify-between">
-                    <span className="text-gray-700 dark:text-gray-300">{t('supabase')}</span>
-                    <span className={supabaseService.isEnabled() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      {supabaseService.isEnabled() ? t('connected') : t('notAvailable')}
+                    <span className="text-gray-700 dark:text-gray-300">Firebase:</span>
+                    <span className={firebaseService.isEnabled() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                      {firebaseService.isEnabled() ? t('connected') : t('notAvailable')}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -324,15 +322,10 @@ const AppContent: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                {!supabaseService.isEnabled() && (
-                  <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-yellow-800 dark:text-yellow-200 text-xs">
-                    {t('debugInstructions')}
-                  </div>
-                )}
               </div>
               <div className="space-y-4">
-                <button 
-                  onClick={() => setIsAuthModalOpen(true)} 
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
                   className="bg-gradient-to-r from-teal-500 to-blue-600 text-white font-semibold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-lg"
                 >
                   {t('getStarted')}
@@ -345,14 +338,14 @@ const AppContent: React.FC = () => {
           <>
             {isApiKeyMissing && (
               <div className="mb-6">
-                <Alert type="error" title="Configuration Required" message="Please configure your GEMINI_API_KEY in the environment variables to use VitaShifa's AI features." />
+                <Alert type="error" title="Configuration Required" message="Please configure your VITE_GEMINI_API_KEY in the environment variables to use VitaShifa's AI features." />
               </div>
             )}
             <div className="animate-fade-in">{renderActiveTab()}</div>
           </>
         )}
       </main>
-      
+
       <footer className="mt-auto bg-white/50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 py-8 transition-colors duration-300">
         <div className="container mx-auto px-4 text-center space-y-4">
           <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
@@ -365,7 +358,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-center justify-center space-x-4 rtl:space-x-reverse text-xs text-gray-500 dark:text-gray-500">
             <span>© 2025 {t('appTitle')}</span>
             {user && (
-              <span>{supabaseService.isEnabled() ? t('cloudSync') : t('localStorage')}</span>
+              <span>{firebaseService.isEnabled() ? t('cloudSync') : t('localStorage')}</span>
             )}
             <span>{t('builtWithCare')}</span>
           </div>
@@ -373,7 +366,12 @@ const AppContent: React.FC = () => {
       </footer>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onAuthSuccess={handleAuthSuccess} />
-      <ChatHistory isOpen={isChatHistoryOpen} onClose={() => setIsChatHistoryOpen(false)} onChatSelect={handleChatSelect} />
+      <ChatHistory 
+        isOpen={isChatHistoryOpen} 
+        onClose={() => setIsChatHistoryOpen(false)} 
+        onChatSelect={handleChatSelect}
+        key={chatUpdateCounter} // Force re-render and re-fetch when a chat is saved
+      />
     </div>
   );
 };

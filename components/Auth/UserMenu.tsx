@@ -1,7 +1,7 @@
 // components/Auth/UserMenu.tsx
 import React, { useState } from 'react';
 import { User, LogOut, History, ChevronDown } from 'lucide-react';
-import { supabaseService } from '../../services/supabase';
+import { firebaseService } from '../../services/firebaseService';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserMenuProps {
@@ -15,12 +15,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut, onShowHisto
   const { t } = useLanguage();
 
   const handleSignOut = async () => {
-    await supabaseService.signOut();
+    await firebaseService.signOut();
     onSignOut();
     setIsOpen(false);
   };
 
-  const displayName = user?.user_metadata?.display_name || user?.email || 'Anonymous User';
+  const displayName = user?.displayName || user?.email || 'Anonymous User';
   const isAnonymous = !user?.email;
 
   return (
@@ -52,7 +52,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut, onShowHisto
                 {isAnonymous ? 'Guest Session' : user?.email}
               </div>
             </div>
-            
+
             <div className="py-1">
               <button
                 onClick={() => {
@@ -64,7 +64,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut, onShowHisto
                 <History className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 <span>{t('chatHistory')}</span>
               </button>
-              
+
               <button
                 onClick={handleSignOut}
                 className="w-full text-start px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
@@ -74,8 +74,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut, onShowHisto
               </button>
             </div>
           </div>
-          
-          <div 
+
+          <div
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />

@@ -43,9 +43,10 @@ export const GENERAL_DISCLAIMER = "VitaShifa provides AI-generated health inform
 
 export const EMERGENCY_DISCLAIMER = "🚨 FOR MEDICAL EMERGENCIES: Call 911 or your local emergency services immediately. VitaShifa is not for emergency situations.";
 
-export const CHRONIC_CONDITIONS_OPTIONS = [
-  "Diabetes Type 1", "Diabetes Type 2", "Hypertension", "Asthma", "Arthritis",
-  "Heart Disease", "Chronic Kidney Disease", "COPD", "Depression", "Anxiety",
-  "Thyroid Disorders", "Migraine", "Chronic Pain", "Sleep Disorders",
-  "None", "Other (please specify)"
+// Changed from strings to translation keys
+export const CHRONIC_CONDITIONS_KEYS = [
+  "diabetes1", "diabetes2", "hypertension", "asthma", "arthritis",
+  "heartDisease", "kidneyDisease", "copd", "depression", "anxiety",
+  "thyroidDisorders", "migraine", "chronicPain", "sleepDisorders",
+  "none", "other"
 ];

@@ -21,10 +21,9 @@ export default defineConfig({
       'react-dom', 
       '@google/genai',
       'firebase/app',
+      'firebase/auth',
       'firebase/firestore',
-      'firebase/analytics'
     ],
-    exclude: ['firebase']
   },
   
   // Server configuration for development
@@ -45,6 +44,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           gemini: ['@google/genai'],
           ui: ['lucide-react']
         }

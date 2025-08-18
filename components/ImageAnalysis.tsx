@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, Scan, X } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { supabaseService } from '../services/supabase';
+import { firebaseService } from '../services/firebaseService';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -57,7 +57,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
         setSaveStatus('saving');
         try {
           const queryText = `Image Analysis: ${prompt} [Image: ${image.file.name}]`;
-          await supabaseService.saveChat(NavigationTab.IMAGE_ANALYSIS, queryText, result.formatted);
+          await firebaseService.saveChat(NavigationTab.IMAGE_ANALYSIS, queryText, result.formatted);
           setSaveStatus('saved');
           onChatSaved?.();
           setTimeout(() => setSaveStatus('idle'), 3000);
@@ -76,7 +76,7 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
   const getSaveStatusMessage = () => {
     switch (saveStatus) {
       case 'saving': return { type: 'info' as const, message: 'Saving image analysis...' };
-      case 'saved': return { type: 'success' as const, message: supabaseService.isEnabled() ? 'Analysis saved to your history' : 'Analysis saved locally' };
+      case 'saved': return { type: 'success' as const, message: firebaseService.isEnabled() ? 'Analysis saved to your history' : 'Analysis saved locally' };
       case 'error': return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
       default: return null;
     }
@@ -121,8 +121,8 @@ export const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ user, onChatSaved 
             {user && (
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <p className="text-sm text-purple-700 dark:text-purple-300">
-                  💾 {t('signedIn')} as <strong>{user.user_metadata?.display_name || user.email || 'Anonymous'}</strong> - 
-                  Your image analysis will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+                  💾 {t('signedIn')} as <strong>{user.displayName || user.email || 'Anonymous'}</strong> -
+                  Your image analysis will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
                 </p>
               </div>
             )}

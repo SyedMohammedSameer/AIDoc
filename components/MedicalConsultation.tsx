@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Bot } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { supabaseService } from '../services/supabase';
+import { firebaseService } from '../services/firebaseService'; // Changed import
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResponseFormatter } from './ResponseFormatter';
 import { Alert } from './Alert';
@@ -37,10 +37,10 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
         setError(result.response.text);
       } else {
         setResponse(result.formatted);
-        
+
         setSaveStatus('saving');
         try {
-          await supabaseService.saveChat(NavigationTab.DRUG_INFO, query, result.formatted);
+          await firebaseService.saveChat(NavigationTab.DRUG_INFO, query, result.formatted); // Changed service
           setSaveStatus('saved');
           onChatSaved?.();
           setTimeout(() => setSaveStatus('idle'), 3000);
@@ -59,7 +59,7 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
   const getSaveStatusMessage = () => {
     switch (saveStatus) {
       case 'saving': return { type: 'info' as const, message: 'Saving consultation...' };
-      case 'saved': return { type: 'success' as const, message: supabaseService.isEnabled() ? 'Consultation saved to your history' : 'Consultation saved locally' };
+      case 'saved': return { type: 'success' as const, message: firebaseService.isEnabled() ? 'Consultation saved to your history' : 'Consultation saved locally' }; // Changed service
       case 'error': return { type: 'warning' as const, message: 'Saved locally only - cloud sync failed' };
       default: return null;
     }
@@ -82,14 +82,14 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="consultation-query" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('askAbout')}</label>
-            <textarea 
-              id="consultation-query" 
-              value={query} 
-              onChange={(e) => setQuery(e.target.value)} 
-              placeholder={t('consultationPlaceholder')} 
-              rows={4} 
-              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none" 
-              disabled={isLoading} 
+            <textarea
+              id="consultation-query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('consultationPlaceholder')}
+              rows={4}
+              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"
+              disabled={isLoading}
             />
           </div>
           <button type="submit" disabled={!query.trim() || isLoading} className="w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 rtl:space-x-reverse">
@@ -99,8 +99,8 @@ export const MedicalConsultation: React.FC<MedicalConsultationProps> = ({ user, 
         {user && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              💾 Signed in as <strong>{user.user_metadata?.display_name || user.email || 'Anonymous'}</strong> - 
-              Your consultations will be {supabaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
+              💾 Signed in as <strong>{user.displayName || user.email || 'Anonymous'}</strong> -
+              Your consultations will be {firebaseService.isEnabled() ? 'saved to your cloud history' : 'saved locally'}
             </p>
           </div>
         )}
